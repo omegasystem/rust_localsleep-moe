@@ -1,0 +1,30 @@
+# =============================================================================
+# rust_localsleep_moe - Core Python Runtime & Rust Bridge Requirements
+# =============================================================================
+
+# CUDA PyTorch Index (Supports cu130 / Blackwell sm_120 / Thor)
+--extra-index-url https://download.pytorch.org/whl/cu130
+
+# PyTorch Deep Learning Backbone
+torch>=2.5.0
+torchvision
+
+# Rust <-> Python PyO3 Bridge Tools (Required for localsleep_rs compilation)
+maturin>=1.5.0
+patchelf>=0.17.2
+
+# Hugging Face Model Loading & Tokenization
+transformers>=4.36.0
+accelerate>=0.26.0
+safetensors>=0.4.1
+sentencepiece>=0.1.99
+protobuf>=3.20.0
+huggingface_hub>=0.19.0
+
+# Quantization & Acceleration Kernels
+bitsandbytes>=0.42.0
+compressed-tensors>=0.6.0
+
+# Utilities & Multimodal Support
+Pillow>=10.0.0
+numpy>=1.24.0

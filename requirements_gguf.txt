@@ -1,0 +1,21 @@
+# =============================================================================
+# rust_localsleep_moe - Optional GGUF / Llama-CPP Acceleration Requirements
+# =============================================================================
+
+# Include core runtime requirements
+-r requirements.txt
+
+# GGUF Runtime (llama-cpp-python)
+llama-cpp-python>=0.2.85
+
+# -----------------------------------------------------------------------------
+# Compilation Notes for CUDA / Blackwell / Thor Acceleration:
+# -----------------------------------------------------------------------------
+# 1. For NVIDIA RTX 5080 (Blackwell sm_120 / CUDA 13.0):
+#    CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=120" pip install llama-cpp-python --no-cache-dir
+#
+# 2. For NVIDIA Jetson Thor / Orin (aarch64 / sm_87):
+#    CMAKE_ARGS="-DGGML_CUDA=on -DCMAKE_CUDA_ARCHITECTURES=87" pip install llama-cpp-python --no-cache-dir
+#
+# 3. For Pure CPU Fallback (Zero CUDA dependency):
+#    pip install llama-cpp-python --no-cache-dir

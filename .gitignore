@@ -1,0 +1,13 @@
+target/
+*.so
+*.pyc
+__pycache__/
+*.safetensors
+*.bin
+*.pt
+checkpoints/
+*.jsonl
+*.bak
+.DS_Store
+venv/
+.venv/
