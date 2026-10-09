@@ -49,12 +49,11 @@ class EmbodiedToolHarness:
             full_path = os.path.join(self.isolated_output_dir, os.path.basename(path.strip()))
         return full_path
 
-    def read_file(self, path: str, offset: Optional[int] = None, limit: int = 60, chunk_size: Optional[int] = None) -> str:
+    def read_file(self, path: str, offset: Optional[int] = None, limit: int = 150, chunk_size: Optional[int] = None) -> str:
         """
-        分段讀取大型檔案（具備智能狀態指針與強制防爆 Hard Cap）：
-        - 自動續讀 (Auto-Paging): 若未傳 offset，且上次已讀過該檔案，自動從上次的 NEXT_OFFSET 接續讀取！
-        - 預設行分段: limit 預設 60 行，硬性上限 Clamp 80 行，杜絕塞爆注意力
-        - 字元分段: 若傳入 chunk_size，硬性上限 Clamp 2500 字元
+        分段讀取檔案：
+        - 預設行分段: limit 預設 150 行，硬性上限 Clamp 300 行（滿足大 Chunk 一次讀入需求）
+        - 字元分段: 若傳入 chunk_size，硬性上限 Clamp 8000 字元
         - 自動回傳總行數/總字元數與分段進度 metadata
         """
         try:
@@ -70,14 +69,13 @@ class EmbodiedToolHarness:
             file_bytes = os.path.getsize(target)
             norm_key = os.path.normpath(target)
 
-            # 智能自動續讀邏輯：若模型偷懶沒傳 offset，自動載入記憶中的指針
             actual_offset = offset
             if actual_offset is None:
                 actual_offset = self.last_read_state.get(norm_key, 1)
 
-            # 字元區塊分段模式 (Character chunking - Hard Cap 2500 chars)
+            # 字元區塊分段模式 (Character chunking - Hard Cap 8000 chars)
             if chunk_size is not None and chunk_size > 0:
-                safe_chunk_size = min(chunk_size, 2500)
+                safe_chunk_size = min(chunk_size, 8000)
                 with open(target, "r", encoding="utf-8", errors="replace") as f:
                     content = f.read()
                 total_chars = len(content)
@@ -94,8 +92,8 @@ class EmbodiedToolHarness:
                 )
                 return header + (chunk if chunk else "[Offset beyond EOF]")
 
-            # 行分段模式 (Line chunking, default - Hard Cap 80 lines)
-            safe_limit = min(max(1, limit), 80)
+            # 行分段模式 (Line chunking, default - Hard Cap 300 lines)
+            safe_limit = min(max(1, limit), 300)
             with open(target, "r", encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()
 
@@ -106,7 +104,7 @@ class EmbodiedToolHarness:
 
             has_more = end_idx < total_lines
             next_offset = end_idx + 1 if has_more else None
-            self.last_read_state[norm_key] = next_offset if has_more else 1  # 讀完重置為 1，未讀完記錄下一行
+            self.last_read_state[norm_key] = next_offset if has_more else 1
 
             header = (
                 f"--- [FILE: {path} | LINES: {start_idx + 1}..{end_idx}/{total_lines} "
