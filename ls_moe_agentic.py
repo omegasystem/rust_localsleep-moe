@@ -170,6 +170,9 @@ def run_generation_turn(
     cjk_cleaner = CJKStreamCleaner()
     accumulated_full_text = ""
     was_interrupted = False
+    tool_calls_count = 0
+    consecutive_tool_errors = 0
+    MAX_TOOL_CALLS_PER_TURN = 3
 
     STOP_PHRASES = [
         "</thought>", "**thought", "<thought>",
@@ -280,7 +283,25 @@ def run_generation_turn(
             if "</tool_call>" in accumulated_full_text:
                 tool_output, _ = execute_tool_calls(accumulated_full_text, harness)
                 if tool_output:
-                    print(f"\n📥 \033[1;32m[Tool Result Injected]:\033[0m\n{tool_output}\n")
+                    tool_calls_count += 1
+                    if "File not found" in tool_output or "error" in tool_output.lower():
+                        consecutive_tool_errors += 1
+                    else:
+                        consecutive_tool_errors = 0
+
+                    print(f"\n📥 \033[1;32m[Tool Result Injected (Call #{tool_calls_count})]:\033[0m\n{tool_output}\n")
+
+                    # 防爆斷路器 (Circuit Breaker)
+                    if tool_calls_count >= MAX_TOOL_CALLS_PER_TURN or consecutive_tool_errors >= 2:
+                        cb_msg = (
+                            f"\n\n⚠️ \033[1;31m[Tool Circuit Breaker Triggered]\033[0m: "
+                            f"已達到單輪工具呼叫上限 ({tool_calls_count}/{MAX_TOOL_CALLS_PER_TURN}) 或連續遭遇錯誤。"
+                            f"強制截斷自動調度，防止注意力崩潰與死循環。\n"
+                        )
+                        print(cb_msg)
+                        accumulated_full_text += f"\n<circuit_breaker reason=\"max_calls_or_repeated_errors\" />\n"
+                        break
+
                     tool_ids = tokenizer(f"\n{tool_output}\n", return_tensors="pt").input_ids.to(device)
                     generated_ids = torch.cat([generated_ids, tool_ids], dim=-1)
                     curr_input_ids = tool_ids[:, -1:]

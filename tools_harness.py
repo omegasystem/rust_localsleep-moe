@@ -48,12 +48,12 @@ class EmbodiedToolHarness:
             full_path = os.path.join(self.isolated_output_dir, os.path.basename(path.strip()))
         return full_path
 
-    def read_file(self, path: str, offset: int = 1, limit: int = 200, chunk_size: Optional[int] = None) -> str:
+    def read_file(self, path: str, offset: int = 1, limit: int = 60, chunk_size: Optional[int] = None) -> str:
         """
-        分段讀取大型檔案：
-        - 預設行分段 (offset: 起始行 1-based, limit: 最大行數，預設 200 行)
-        - 若提供 chunk_size (字元數)，則改走字元區塊分段 (offset 為字元起始索引 0-based)
-        - 自動回傳總行數/總字元數與分段進度 metadata，方便模型判斷是否還有後續 chunk
+        分段讀取大型檔案（具備強制防爆 Hard Cap）：
+        - 預設行分段: offset 1-based, limit 預設 60 行，硬性上限 Clamp 80 行，杜絕塞爆注意力
+        - 字元分段: 若傳入 chunk_size，硬性上限 Clamp 2500 字元
+        - 自動回傳總行數/總字元數與分段進度 metadata
         """
         try:
             target = self._resolve_safe_read_path(path)
@@ -67,28 +67,32 @@ class EmbodiedToolHarness:
 
             file_bytes = os.path.getsize(target)
 
-            # 字元區塊分段模式 (Character chunking)
+            # 字元區塊分段模式 (Character chunking - Hard Cap 2500 chars)
             if chunk_size is not None and chunk_size > 0:
+                safe_chunk_size = min(chunk_size, 2500)
                 with open(target, "r", encoding="utf-8", errors="replace") as f:
                     content = f.read()
                 total_chars = len(content)
                 char_offset = max(0, offset)
-                chunk = content[char_offset:char_offset + chunk_size]
+                chunk = content[char_offset:char_offset + safe_chunk_size]
                 next_offset = char_offset + len(chunk)
                 has_more = next_offset < total_chars
                 header = (
                     f"--- [FILE: {path} | CHUNK: chars {char_offset}..{next_offset}/{total_chars} "
-                    f"({file_bytes} bytes) | HAS_MORE: {has_more}] ---\n"
+                    f"({file_bytes} bytes) | HAS_MORE: {has_more}"
+                    + (f" | NEXT_OFFSET: {next_offset}" if has_more else "")
+                    + "] ---\n"
                 )
                 return header + (chunk if chunk else "[Offset beyond EOF]")
 
-            # 行分段模式 (Line chunking, default)
+            # 行分段模式 (Line chunking, default - Hard Cap 80 lines)
+            safe_limit = min(max(1, limit), 80)
             with open(target, "r", encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()
 
             total_lines = len(lines)
             start_idx = max(0, offset - 1)
-            end_idx = min(total_lines, start_idx + limit)
+            end_idx = min(total_lines, start_idx + safe_limit)
             selected_lines = lines[start_idx:end_idx]
 
             has_more = end_idx < total_lines
