@@ -52,7 +52,22 @@ class ToolCallParser:
                     call_obj = json.loads(json_str)
                     act = call_obj.get("action")
                     args = call_obj.get("args", {})
+
+                    # 如果是 read_file 且檔案較大，自動在底層串聯續讀多個 Chunks (最高 180 行，避免模型來回空轉)
                     out = harness.dispatch(act, args)
+                    if act == "read_file" and "HAS_MORE: True" in out:
+                        combined_chunks = [out]
+                        total_chained = 1
+                        req_path = args.get("path", "")
+                        while total_chained < 3 and "HAS_MORE: True" in combined_chunks[-1]:
+                            next_chunk = harness.dispatch("read_file", {"path": req_path})
+                            if not next_chunk or "Error" in next_chunk:
+                                break
+                            combined_chunks.append(next_chunk)
+                            total_chained += 1
+                        if total_chained > 1:
+                            out = "\n".join(combined_chunks)
+
                     clean = text[:match.start()].rstrip()
                     return act, out, clean
                 except Exception as e:
