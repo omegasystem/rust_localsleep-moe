@@ -16,9 +16,10 @@ class EmbodiedToolHarness:
       4. web_search(query, max_results=5) (via DuckDuckGo / SearXNG fallback)
       5. extract_and_save_artifacts(text) -> Multi-line XML artifact auto-persister (<file path="...">...)
     """
-    def __init__(self, workspace_root=".", isolated_output_dir="./isolated_output"):
+    def __init__(self, workspace_root=".", isolated_output_dir="./isolated_output", session_logger=None):
         self.workspace_root = os.path.abspath(workspace_root)
         self.isolated_output_dir = os.path.abspath(os.path.join(self.workspace_root, isolated_output_dir))
+        self.session_logger = session_logger
         os.makedirs(self.isolated_output_dir, exist_ok=True)
 
     def _resolve_safe_read_path(self, path: str) -> str:
@@ -133,4 +134,12 @@ class EmbodiedToolHarness:
             return self.list_dir(args.get("path", "."))
         elif action == "web_search":
             return self.web_search(args.get("query", ""))
+        elif action == "recall_sessions":
+            if self.session_logger:
+                return self.session_logger.recall_recent_sessions(limit=args.get("limit", 5))
+            return "[Error: session_logger not attached to harness]"
+        elif action == "recall_search":
+            if self.session_logger:
+                return self.session_logger.recall_search(query=args.get("query", ""), max_matches=args.get("max_matches", 3))
+            return "[Error: session_logger not attached to harness]"
         return f"[Unknown Tool: {action}]"

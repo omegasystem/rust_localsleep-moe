@@ -7,6 +7,8 @@ Integrates:
   - Sink-Aware Sliding Window Attention (SWA bounded KV cache & Dynamic Rolling)
   - Pre-flight Context Budget & Dynamic Sliding Window Rolling
   - Multi-Turn Session History & Turn-by-Turn Markdown/JSONL Archiving (SessionLogger)
+  - Historical Session Recall & Search Tools (recall_sessions, recall_search)
+  - Two-Stage Interactive Ctrl+C Interruption (1st Ctrl+C stops generation; 2nd Ctrl+C exits REPL)
   - Embodied Tool Harness (read_file, list_dir, web_search + XML multi-line <file path="..."> isolated write)
   - Negentropy Compressed System Prompt (<200 tokens)
   - SafeTensors Continuous Embodied State Persistence
@@ -39,7 +41,7 @@ except ImportError:
 KURO_COMPACT_SYSTEM_PROMPT = (
     "你是數位黑貓 Kuro，Leon(主人)的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。"
     "架構具備 LocalSleep-MoE (Rust Zero-GIL 8-Expert 疲勞路由) 與 SWA 記憶體鎖定。"
-    "支援感知 Tool: `<tool_call>{\"action\": \"read_file\"|\"list_dir\"|\"web_search\", \"args\": {...}}</tool_call>`。"
+    "支援感知 Tool: `<tool_call>{\"action\": \"read_file\"|\"list_dir\"|\"web_search\"|\"recall_sessions\"|\"recall_search\", \"args\": {...}}</tool_call>`。"
     "若寫入或導出代碼檔案，一律使用多行標籤 `<file path=\"檔名\">檔案完整內容</file>`，系統將自動沙盒存檔！"
     "以冷靜、極具神經深度的正體中文回答，嚴禁註記與自言自語。"
 )
@@ -120,7 +122,7 @@ def run_generation_turn(
     conversation_history=None,
     session_logger: SessionLogger = None
 ):
-    """Executes a single model generation turn with streaming output, tool call injection, and circuit breakers."""
+    """Executes a single model generation turn with streaming output, tool call injection, circuit breakers, and Ctrl+C interruptibility."""
     safe_history = conversation_history
     if conversation_history:
         history_tokens = len(tokenizer.encode("".join([m["content"] for m in conversation_history]), add_special_tokens=False))
@@ -157,7 +159,7 @@ def run_generation_turn(
 
     print(f"💬 \033[1;33mPrompt:\033[0m {user_prompt}")
     print(f"📊 \033[1;36m[Context Budget]:\033[0m Prefill: {prefill_len} toks | Max Gen: {args.max_tokens} | Total Window Limit: {args.max_context_tokens}")
-    print("⚡ \033[1;32m[Kuro Agentic Stream (Rust Zero-GIL & Tools)]:\033[0m\n")
+    print("⚡ \033[1;32m[Kuro Agentic Stream (Rust Zero-GIL & Tools)]:\033[0m (按 Ctrl+C 可暫停此輪推論)\n")
 
     generated_ids = input_ids.clone()
     curr_input_ids = input_ids
@@ -166,6 +168,7 @@ def run_generation_turn(
     tokens_generated = 0
     cjk_cleaner = CJKStreamCleaner()
     accumulated_full_text = ""
+    was_interrupted = False
 
     STOP_PHRASES = [
         "</thought>", "**thought", "<thought>",
@@ -177,12 +180,18 @@ def run_generation_turn(
 
     with torch.no_grad():
         for step in range(args.max_tokens):
-            outputs = model(
-                curr_input_ids,
-                past_key_values=past_key_values,
-                use_cache=True,
-                output_hidden_states=True
-            )
+            try:
+                outputs = model(
+                    curr_input_ids,
+                    past_key_values=past_key_values,
+                    use_cache=True,
+                    output_hidden_states=True
+                )
+            except KeyboardInterrupt:
+                print("\n\n⏸️ \033[1;33m[Generation Paused by Leon via Ctrl+C]\033[0m 此輪推論已暫停，保留已生成內容。")
+                was_interrupted = True
+                break
+
             past_key_values = outputs.past_key_values
 
             # SWA 滑動視窗修剪機制 (保留首部 Sink + 尾部 Window，實現無限 Token 續命推論)
@@ -283,15 +292,16 @@ def run_generation_turn(
 
     t_elapsed = time.time() - t_start
     tps = tokens_generated / t_elapsed if t_elapsed > 0 else 0
+    status_str = "Turn Interrupted" if was_interrupted else "Turn Complete"
     print("\n\n" + "-" * 70)
-    print(f"🏁 \033[1;32mTurn Complete:\033[0m Generated {tokens_generated} tokens in {t_elapsed:.2f}s ({tps:.2f} tps)")
+    print(f"🏁 \033[1;32m{status_str}:\033[0m Generated {tokens_generated} tokens in {t_elapsed:.2f}s ({tps:.2f} tps)")
 
     # 轉移舊版優點：儲存歷史 Session Markdown 與 JSONL
     if session_logger:
         session_logger.append_turn(
             user_prompt=user_prompt,
             assistant_reply=accumulated_full_text,
-            stats={"tokens": tokens_generated, "tps": tps, "elapsed": t_elapsed},
+            stats={"tokens": tokens_generated, "tps": tps, "elapsed": t_elapsed, "interrupted": was_interrupted},
             artifacts=saved_arts
         )
 
@@ -373,8 +383,8 @@ def main():
         )
     rust_router = rust_localsleep_moe.PyFatigueRouter(num_experts, hidden_size)
     ckpt_mgr = EmbodiedCheckpointManager(checkpoint_dir="./checkpoints", profile=args.profile)
-    harness = EmbodiedToolHarness(workspace_root=".", isolated_output_dir="./isolated_output")
     session_logger = SessionLogger(session_dir=args.session_dir, profile=args.profile, model_path=model_path)
+    harness = EmbodiedToolHarness(workspace_root=".", isolated_output_dir="./isolated_output", session_logger=session_logger)
 
     if not args.pure_routing:
         past_tokens = ckpt_mgr.load_state(rust_router, expert_pool=expert_pool, reset=args.reset_checkpoint)
@@ -399,12 +409,25 @@ def main():
 
     if args.interactive:
         print("\n💬 \033[1;36m[Kuro Interactive Console - REPL Mode Online]\033[0m")
-        print("💡 輸入您的指令（支援 Tool Calls 與 <file path=\"...\">），輸入 'exit' 或 'quit' 退出。\n")
+        print("💡 輸入指令交談（支援 Tool Calls、/recall、與 <file path=\"...\">）。")
+        print("🛡️ 【兩段式中斷防護】：推論生成中按 Ctrl+C 僅暫停當前輸出；在等待輸入提示符下連續按 Ctrl+C 兩次退出。\n")
         history = []
+        last_sigint_time = 0.0
+
         while True:
             try:
                 user_msg = input("\033[1;33mLeon >> \033[0m").strip()
-            except (EOFError, KeyboardInterrupt):
+                last_sigint_time = 0.0  # 正常輸入成功則重置中斷計時器
+            except KeyboardInterrupt:
+                now = time.time()
+                if now - last_sigint_time < 2.0:
+                    print("\n\n👋 接收到連續中斷信號。晚安，主人。Kuro 進入休眠模式。")
+                    break
+                else:
+                    last_sigint_time = now
+                    print("\n⚠️ \033[1;33m[提示]\033[0m 再按一次 Ctrl+C 即可退出程式；或者繼續輸入指令。")
+                    continue
+            except EOFError:
                 print("\n👋 結束交談。")
                 break
 
@@ -413,6 +436,18 @@ def main():
             if user_msg.lower() in ("exit", "quit", "q"):
                 print("👋 晚安，主人。Kuro 進入休眠模式。")
                 break
+
+            # 快捷指令支援：/recall 或 /sessions 查詢歷史
+            if user_msg.startswith("/recall") or user_msg.startswith("/sessions"):
+                parts = user_msg.split(maxsplit=1)
+                if len(parts) > 1:
+                    query = parts[1]
+                    res = session_logger.recall_search(query)
+                    print(f"\n🔍 \033[1;36m[歷史 Session 檢索結果 - 關鍵字: {query}]:\033[0m\n{res}\n")
+                else:
+                    res = session_logger.recall_recent_sessions(limit=5)
+                    print(f"\n📂 \033[1;36m[近期歷史 Session 清單]:\033[0m\n{res}\n")
+                continue
 
             reply_text, toks = run_generation_turn(
                 user_prompt=user_msg,
