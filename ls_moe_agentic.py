@@ -322,7 +322,34 @@ def run_generation_turn(
                         accumulated_full_text += f"\n<circuit_breaker reason=\"max_calls_or_repeated_errors\" />\n"
                         break
 
-                    tool_ids = tokenizer(f"\n{tool_output}\n", return_tensors="pt").input_ids.to(device)
+                    # 正式 Turn 角色切換：關閉 model turn，切入 user 角色注入環境工具回傳結果，再開啟全新 model turn
+                    injection_text = (
+                        f"<end_of_turn>\n"
+                        f"<start_of_turn>user\n"
+                        f"【環境工具回傳結果 (System Tool Response)】：\n"
+                        f"{tool_output}\n"
+                        f"請根據上述真實工具回傳的內容繼續回答或執行下一步。\n"
+                        f"<end_of_turn>\n"
+                        f"<start_of_turn>model\n"
+                    )
+
+                    tool_ids = tokenizer(injection_text, return_tensors="pt").input_ids.to(device)
+                    # 關鍵修復：將整個注入的 Turn 區塊餵入模型進行真實的前向傳播 (Prefill)，完整建立 KV-Cache！
+                    with torch.no_grad():
+                        prefill_outputs = model(
+                            tool_ids,
+                            past_key_values=past_key_values,
+                            use_cache=True,
+                            output_hidden_states=True
+                        )
+                        past_key_values = prefill_outputs.past_key_values
+                        if use_swa and past_key_values is not None:
+                            past_key_values = trim_past_key_values_swa(
+                                past_key_values,
+                                sink_size=args.swa_sink_size,
+                                window_size=args.swa_window_size
+                            )
+
                     generated_ids = torch.cat([generated_ids, tool_ids], dim=-1)
                     curr_input_ids = tool_ids[:, -1:]
                     accumulated_full_text = ""
