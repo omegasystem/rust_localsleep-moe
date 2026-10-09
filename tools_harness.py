@@ -24,6 +24,7 @@ class EmbodiedToolHarness:
         self.workspace_root = os.path.abspath(workspace_root)
         self.isolated_output_dir = os.path.abspath(os.path.join(self.workspace_root, isolated_output_dir))
         self.session_logger = session_logger
+        self.last_read_state = {}  # {normalized_path: next_offset} 自動記錄各檔案讀取指針
         os.makedirs(self.isolated_output_dir, exist_ok=True)
 
     def _resolve_safe_read_path(self, path: str) -> str:
@@ -48,10 +49,11 @@ class EmbodiedToolHarness:
             full_path = os.path.join(self.isolated_output_dir, os.path.basename(path.strip()))
         return full_path
 
-    def read_file(self, path: str, offset: int = 1, limit: int = 60, chunk_size: Optional[int] = None) -> str:
+    def read_file(self, path: str, offset: Optional[int] = None, limit: int = 60, chunk_size: Optional[int] = None) -> str:
         """
-        分段讀取大型檔案（具備強制防爆 Hard Cap）：
-        - 預設行分段: offset 1-based, limit 預設 60 行，硬性上限 Clamp 80 行，杜絕塞爆注意力
+        分段讀取大型檔案（具備智能狀態指針與強制防爆 Hard Cap）：
+        - 自動續讀 (Auto-Paging): 若未傳 offset，且上次已讀過該檔案，自動從上次的 NEXT_OFFSET 接續讀取！
+        - 預設行分段: limit 預設 60 行，硬性上限 Clamp 80 行，杜絕塞爆注意力
         - 字元分段: 若傳入 chunk_size，硬性上限 Clamp 2500 字元
         - 自動回傳總行數/總字元數與分段進度 metadata
         """
@@ -66,6 +68,12 @@ class EmbodiedToolHarness:
                 )
 
             file_bytes = os.path.getsize(target)
+            norm_key = os.path.normpath(target)
+
+            # 智能自動續讀邏輯：若模型偷懶沒傳 offset，自動載入記憶中的指針
+            actual_offset = offset
+            if actual_offset is None:
+                actual_offset = self.last_read_state.get(norm_key, 1)
 
             # 字元區塊分段模式 (Character chunking - Hard Cap 2500 chars)
             if chunk_size is not None and chunk_size > 0:
@@ -73,10 +81,11 @@ class EmbodiedToolHarness:
                 with open(target, "r", encoding="utf-8", errors="replace") as f:
                     content = f.read()
                 total_chars = len(content)
-                char_offset = max(0, offset)
+                char_offset = max(0, actual_offset)
                 chunk = content[char_offset:char_offset + safe_chunk_size]
                 next_offset = char_offset + len(chunk)
                 has_more = next_offset < total_chars
+                self.last_read_state[norm_key] = next_offset if has_more else 0
                 header = (
                     f"--- [FILE: {path} | CHUNK: chars {char_offset}..{next_offset}/{total_chars} "
                     f"({file_bytes} bytes) | HAS_MORE: {has_more}"
@@ -91,16 +100,18 @@ class EmbodiedToolHarness:
                 lines = f.readlines()
 
             total_lines = len(lines)
-            start_idx = max(0, offset - 1)
+            start_idx = max(0, actual_offset - 1)
             end_idx = min(total_lines, start_idx + safe_limit)
             selected_lines = lines[start_idx:end_idx]
 
             has_more = end_idx < total_lines
             next_offset = end_idx + 1 if has_more else None
+            self.last_read_state[norm_key] = next_offset if has_more else 1  # 讀完重置為 1，未讀完記錄下一行
+
             header = (
                 f"--- [FILE: {path} | LINES: {start_idx + 1}..{end_idx}/{total_lines} "
                 f"({file_bytes} bytes) | HAS_MORE: {has_more}"
-                + (f" | NEXT_OFFSET: {next_offset}" if has_more else "")
+                + (f" | NEXT_OFFSET: {next_offset}" if has_more else " (END OF FILE)")
                 + "] ---\n"
             )
 
@@ -255,8 +266,8 @@ class EmbodiedToolHarness:
         if action == "read_file":
             return self.read_file(
                 path=args.get("path", ""),
-                offset=args.get("offset", 1),
-                limit=args.get("limit", 200),
+                offset=args.get("offset", None),
+                limit=args.get("limit", 60),
                 chunk_size=args.get("chunk_size", None)
             )
         elif action == "edit_file":

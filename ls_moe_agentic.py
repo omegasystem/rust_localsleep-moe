@@ -173,6 +173,7 @@ def run_generation_turn(
     tool_calls_count = 0
     consecutive_tool_errors = 0
     MAX_TOOL_CALLS_PER_TURN = 3
+    recent_tool_actions = []  # 記錄該輪歷史執行的工具簽章 [(action, json_args)] 用於抗漂移與重複動作偵測
 
     STOP_PHRASES = [
         "</thought>", "**thought", "<thought>",
@@ -281,6 +282,25 @@ def run_generation_turn(
 
             # Check for completed tool call block
             if "</tool_call>" in accumulated_full_text:
+                # 偵測是否為完全重複的工具動作（抗漂移死循環斷路器）
+                raw_call = re.search(r"<tool_call>(.*?)</tool_call>", accumulated_full_text, re.DOTALL)
+                is_duplicate_drift = False
+                if raw_call:
+                    norm_call_str = raw_call.group(1).strip()
+                    if norm_call_str in recent_tool_actions:
+                        is_duplicate_drift = True
+                    else:
+                        recent_tool_actions.append(norm_call_str)
+
+                if is_duplicate_drift:
+                    drift_msg = (
+                        f"\n\n🛑 \033[1;31m[Anti-Drift Circuit Breaker Triggered]\033[0m: "
+                        f"模型正在連續發起完全相同的重複動作！已強制熔斷該輪推論，防止原地空轉死循環。\n"
+                    )
+                    print(drift_msg)
+                    accumulated_full_text += f"\n<circuit_breaker reason=\"anti_drift_duplicate_action\" />\n"
+                    break
+
                 tool_output, _ = execute_tool_calls(accumulated_full_text, harness)
                 if tool_output:
                     tool_calls_count += 1
