@@ -59,6 +59,11 @@ class EmbodiedToolHarness:
             target = self._resolve_safe_read_path(path)
             if not os.path.exists(target):
                 return f"[Error: File not found: {path}]"
+            if os.path.isdir(target):
+                return (
+                    f"[Error: '{path}' is a directory, not a readable file. "
+                    f"Use list_dir(path='{path}') to inspect its contents.]"
+                )
 
             file_bytes = os.path.getsize(target)
 
@@ -158,12 +163,31 @@ class EmbodiedToolHarness:
             return f"[Error writing {path}: {e}]"
 
     def list_dir(self, path: str = ".") -> str:
+        """
+        列出目錄內容，提供精確的檔案型態 [FILE] / [DIR] 標記、大小與相對路徑，
+        防止模型誤把目錄當檔案去 read_file 造成路徑混亂與報錯。
+        """
         try:
             target = self._resolve_safe_read_path(path)
             if not os.path.exists(target):
                 return f"[Error: Directory not found: {path}]"
-            entries = os.listdir(target)
-            return json.dumps(entries[:50], ensure_ascii=False)
+            if not os.path.isdir(target):
+                return f"[Error: Target is not a directory: {path}]"
+
+            entries = sorted(os.listdir(target))
+            formatted = [f"📁 Directory listing of: {path} (total: {len(entries)})"]
+            for name in entries[:60]:
+                full_entry_path = os.path.join(target, name)
+                # 統一給模型相對路徑格式，方便模型直接複製填入 read_file
+                rel_entry_path = os.path.normpath(os.path.join(path, name)) if path != "." else name
+                if os.path.isdir(full_entry_path):
+                    formatted.append(f"  [DIR]  {name}/ -> path: '{rel_entry_path}'")
+                else:
+                    size = os.path.getsize(full_entry_path)
+                    formatted.append(f"  [FILE] {name} ({size} bytes) -> path: '{rel_entry_path}'")
+            if len(entries) > 60:
+                formatted.append(f"  ... (and {len(entries) - 60} more items)")
+            return "\n".join(formatted)
         except Exception as e:
             return f"[Error listing {path}: {e}]"
 
