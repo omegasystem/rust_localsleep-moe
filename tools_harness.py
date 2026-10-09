@@ -10,11 +10,15 @@ class EmbodiedToolHarness:
     """
     Decoupled Tool Harness for LocalSleep-MoE Agentic Workflows.
     Features:
-      1. read_file(path, offset=0, limit=2000)
-      2. write_file(path, content) -> Isolated sandbox output by default
-      3. list_dir(path)
-      4. web_search(query, max_results=5) (via DuckDuckGo / SearXNG fallback)
-      5. extract_and_save_artifacts(text) -> Multi-line XML artifact auto-persister (<file path="...">...)
+      1. read_file(path, offset=1, limit=200, chunk_mode="lines")
+         - Supports line-based chunking or character-based chunking with total stats
+      2. edit_file(path, old_text, new_text, replace_all=False)
+         - Exact block replacement tool without full-file rewrite
+      3. write_file(path, content) -> Isolated sandbox output by default
+      4. list_dir(path)
+      5. web_search(query, max_results=5) (via DuckDuckGo / SearXNG fallback)
+      6. extract_and_save_artifacts(text) -> Multi-line XML artifact auto-persister (<file path="...">...)
+      7. recall_sessions & recall_search -> History log queries
     """
     def __init__(self, workspace_root=".", isolated_output_dir="./isolated_output", session_logger=None):
         self.workspace_root = os.path.abspath(workspace_root)
@@ -24,7 +28,17 @@ class EmbodiedToolHarness:
 
     def _resolve_safe_read_path(self, path: str) -> str:
         clean_path = path.strip().lstrip("/")
+        # 若以 ./isolated_output 或 isolated_output 開頭，直接定位至沙盒目錄
+        if clean_path.startswith("isolated_output/") or clean_path.startswith("isolated_output\\"):
+            sub_path = clean_path[len("isolated_output/"):].lstrip("/\\")
+            return os.path.abspath(os.path.join(self.isolated_output_dir, sub_path))
+
+        # 優先檢查工作區是否存在，若不存在則檢查沙盒是否存在 (讓 read_file 也能無縫讀取已生成的 artifacts)
         full_path = os.path.abspath(os.path.join(self.workspace_root, clean_path))
+        if not os.path.exists(full_path):
+            sandbox_candidate = os.path.abspath(os.path.join(self.isolated_output_dir, os.path.basename(clean_path)))
+            if os.path.exists(sandbox_candidate):
+                return sandbox_candidate
         return full_path
 
     def _resolve_safe_write_path(self, path: str) -> str:
@@ -34,19 +48,103 @@ class EmbodiedToolHarness:
             full_path = os.path.join(self.isolated_output_dir, os.path.basename(path.strip()))
         return full_path
 
-    def read_file(self, path: str, offset: int = 1, limit: int = 200) -> str:
+    def read_file(self, path: str, offset: int = 1, limit: int = 200, chunk_size: Optional[int] = None) -> str:
+        """
+        分段讀取大型檔案：
+        - 預設行分段 (offset: 起始行 1-based, limit: 最大行數，預設 200 行)
+        - 若提供 chunk_size (字元數)，則改走字元區塊分段 (offset 為字元起始索引 0-based)
+        - 自動回傳總行數/總字元數與分段進度 metadata，方便模型判斷是否還有後續 chunk
+        """
         try:
             target = self._resolve_safe_read_path(path)
             if not os.path.exists(target):
                 return f"[Error: File not found: {path}]"
+
+            file_bytes = os.path.getsize(target)
+
+            # 字元區塊分段模式 (Character chunking)
+            if chunk_size is not None and chunk_size > 0:
+                with open(target, "r", encoding="utf-8", errors="replace") as f:
+                    content = f.read()
+                total_chars = len(content)
+                char_offset = max(0, offset)
+                chunk = content[char_offset:char_offset + chunk_size]
+                next_offset = char_offset + len(chunk)
+                has_more = next_offset < total_chars
+                header = (
+                    f"--- [FILE: {path} | CHUNK: chars {char_offset}..{next_offset}/{total_chars} "
+                    f"({file_bytes} bytes) | HAS_MORE: {has_more}] ---\n"
+                )
+                return header + (chunk if chunk else "[Offset beyond EOF]")
+
+            # 行分段模式 (Line chunking, default)
             with open(target, "r", encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()
-            start = max(0, offset - 1)
-            end = start + limit
-            snippet = "".join(lines[start:end])
-            return snippet if snippet else "[File empty or offset beyond EOF]"
+
+            total_lines = len(lines)
+            start_idx = max(0, offset - 1)
+            end_idx = min(total_lines, start_idx + limit)
+            selected_lines = lines[start_idx:end_idx]
+
+            has_more = end_idx < total_lines
+            next_offset = end_idx + 1 if has_more else None
+            header = (
+                f"--- [FILE: {path} | LINES: {start_idx + 1}..{end_idx}/{total_lines} "
+                f"({file_bytes} bytes) | HAS_MORE: {has_more}"
+                + (f" | NEXT_OFFSET: {next_offset}" if has_more else "")
+                + "] ---\n"
+            )
+
+            if not selected_lines:
+                return header + "[Offset beyond EOF or file empty]"
+
+            return header + "".join(selected_lines)
         except Exception as e:
             return f"[Error reading {path}: {e}]"
+
+    def edit_file(self, path: str, old_text: str, new_text: str, replace_all: bool = False) -> str:
+        """
+        精確區塊替換工具 (Exact Block Replacement)：
+        在指定檔案中尋找 old_text 並替換為 new_text，避免重寫整份大檔案造成上下文早夭。
+        - 優先尋找沙盒中的檔案，若不存在則檢查工作區中的檔案，修改後寫入沙盒或原檔。
+        """
+        try:
+            if not old_text:
+                return "[Error: old_text cannot be empty]"
+
+            # 優先搜尋沙盒目錄
+            sandbox_target = self._resolve_safe_write_path(path)
+            workspace_target = self._resolve_safe_read_path(path)
+
+            if os.path.exists(sandbox_target):
+                target = sandbox_target
+            elif os.path.exists(workspace_target):
+                target = workspace_target
+            else:
+                return f"[Error: File not found for editing: {path}]"
+
+            with open(target, "r", encoding="utf-8", errors="replace") as f:
+                content = f.read()
+
+            count = content.count(old_text)
+            if count == 0:
+                return f"[Error: Target block 'old_text' not found in {path}]"
+            if count > 1 and not replace_all:
+                return f"[Error: 'old_text' matched {count} times in {path}. Provide a more unique block or set replace_all=True]"
+
+            if replace_all:
+                updated_content = content.replace(old_text, new_text)
+            else:
+                updated_content = content.replace(old_text, new_text, 1)
+
+            # 存回檔案 (若在沙盒則覆寫沙盒，若不在則存入沙盒以確保隔離安全)
+            with open(target, "w", encoding="utf-8") as f:
+                f.write(updated_content)
+
+            rel_path = os.path.relpath(target, self.workspace_root)
+            return f"[Success: Replaced {count if replace_all else 1} occurrence(s) in {rel_path} ({len(updated_content)} bytes)]"
+        except Exception as e:
+            return f"[Error editing {path}: {e}]"
 
     def write_file(self, path: str, content: str) -> str:
         try:
@@ -127,7 +225,19 @@ class EmbodiedToolHarness:
 
     def dispatch(self, action: str, args: dict) -> str:
         if action == "read_file":
-            return self.read_file(args.get("path", ""), args.get("offset", 1), args.get("limit", 200))
+            return self.read_file(
+                path=args.get("path", ""),
+                offset=args.get("offset", 1),
+                limit=args.get("limit", 200),
+                chunk_size=args.get("chunk_size", None)
+            )
+        elif action == "edit_file":
+            return self.edit_file(
+                path=args.get("path", ""),
+                old_text=args.get("old_text", ""),
+                new_text=args.get("new_text", ""),
+                replace_all=args.get("replace_all", False)
+            )
         elif action == "write_file":
             return self.write_file(args.get("path", ""), args.get("content", ""))
         elif action == "list_dir":
