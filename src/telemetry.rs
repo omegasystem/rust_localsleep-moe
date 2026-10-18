@@ -1,9 +1,8 @@
 //! telemetry.rs - High-Precision Microsecond Telemetry & Visualization Engine
 //! Implements JSONL side-recording, ANSI terminal activity gauges, and Foxglove WebSocket payloads.
 
-use crate::types::{ExpertState, ExpertTelemetry, TelemetryRecord};
-use chrono::Local;
-use std::fs::{File, OpenOptions};
+use crate::types::{ExpertTelemetry, TelemetryRecord};
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 

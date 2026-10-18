@@ -1,6 +1,6 @@
 //! router.rs - High-Performance Fatigue-Aware MoE Router in Pure Rust
 //! Implements entropy-based routing, dynamic sleep refractory masking, in-warp softmax,
-//! and Shannon entropy calculation without Python runtime bottlenecks.
+//! automatic NREM sleep transition, and Shannon entropy calculation without Python runtime bottlenecks.
 
 use crate::types::{ExpertState, LocalSleepConfig};
 use parking_lot::RwLock;
@@ -26,6 +26,7 @@ pub struct FatigueMoERouter {
     pub states: Arc<RwLock<Vec<ExpertState>>>,
     pub sleep_countdown: Arc<RwLock<Vec<usize>>>,
     pub active_token_counts: Arc<RwLock<Vec<usize>>>,
+    pub sleep_cycle_counts: Arc<RwLock<Vec<usize>>>,
 }
 
 impl FatigueMoERouter {
@@ -53,11 +54,12 @@ impl FatigueMoERouter {
             states: Arc::new(RwLock::new(vec![ExpertState::Active; cfg.num_experts])),
             sleep_countdown: Arc::new(RwLock::new(vec![0; cfg.num_experts])),
             active_token_counts: Arc::new(RwLock::new(vec![0; cfg.num_experts])),
+            sleep_cycle_counts: Arc::new(RwLock::new(vec![0; cfg.num_experts])),
         }
     }
 
     /// Forward pass: Computes gating logits, masks sleeping experts (-1e9), applies softmax,
-    /// selects Top-K experts, and updates cumulative token entropy and fatigue scores.
+    /// selects Top-K experts, updates cumulative token entropy and fatigue scores.
     pub fn forward(
         &self,
         hidden_states: &[f32], // [batch_size, hidden_dim]
@@ -72,6 +74,9 @@ impl FatigueMoERouter {
         let states_guard = self.states.read();
         let mut fatigue_guard = self.fatigue_scores.write();
         let mut active_tokens_guard = self.active_token_counts.write();
+
+        // Count how many experts are awake so we never mask 100% of experts simultaneously
+        let awake_count = states_guard.iter().filter(|&&s| s != ExpertState::NremSleep).count();
 
         for b in 0..batch_size {
             let hidden_slice = &hidden_states[b * self.hidden_dim..(b + 1) * self.hidden_dim];
@@ -89,7 +94,7 @@ impl FatigueMoERouter {
 
             // 2. Refractory Sleep Masking & Temperature Scaling
             for k in 0..self.num_experts {
-                if states_guard[k] == ExpertState::NremSleep {
+                if states_guard[k] == ExpertState::NremSleep && awake_count >= self.top_k {
                     logits[k] = -1e9; // Hard mask sleeping modules
                 } else if self.temperature > 0.0 {
                     logits[k] /= self.temperature;
@@ -166,26 +171,64 @@ impl FatigueMoERouter {
         triggered
     }
 
-    /// Exponential homeostatic fatigue decay step
-    pub fn step_decay(&self) {
+    /// Transitions fatigued experts into NremSleep (preserving at least top_k awake experts)
+    /// and returns the list of newly sleeping expert IDs for background Zero-GIL pruning.
+    pub fn enter_nrem_sleep_for_fatigued(&self) -> Vec<usize> {
+        let mut states = self.states.write();
+        let fatigue = self.fatigue_scores.read();
+        let mut countdown = self.sleep_countdown.write();
+        let mut cycles = self.sleep_cycle_counts.write();
+
+        let mut awake_count = states.iter().filter(|&&s| s != ExpertState::NremSleep).count();
+        let mut newly_sleeping = Vec::new();
+
+        for k in 0..self.num_experts {
+            if states[k] != ExpertState::NremSleep
+                && fatigue[k] >= self.fatigue_threshold
+                && awake_count > self.top_k
+            {
+                states[k] = ExpertState::NremSleep;
+                countdown[k] = self.sleep_duration;
+                cycles[k] += 1;
+                awake_count -= 1;
+                newly_sleeping.push(k);
+            } else if states[k] == ExpertState::Active && fatigue[k] >= self.fatigue_threshold * 0.8 {
+                states[k] = ExpertState::Fatigued;
+            }
+        }
+        newly_sleeping
+    }
+
+    /// Exponential homeostatic fatigue decay step & sleep countdown progression
+    pub fn step_decay(&self) -> Vec<usize> {
+        // First transition any newly fatigued experts into NremSleep
+        let newly_sleeping = self.enter_nrem_sleep_for_fatigued();
+
         let mut fatigue = self.fatigue_scores.write();
         let mut countdown = self.sleep_countdown.write();
         let mut states = self.states.write();
 
         for k in 0..self.num_experts {
-            // Apply passive decay
-            fatigue[k] = (fatigue[k] * (1.0 - self.decay_rate)).max(0.0);
-
-            // Decrement sleep countdown if sleeping
             if states[k] == ExpertState::NremSleep {
+                // Accelerated homeostatic recovery during NREM sleep
+                fatigue[k] = (fatigue[k] * (1.0 - self.decay_rate * 3.0)).max(0.0);
                 if countdown[k] > 0 {
                     countdown[k] -= 1;
                 }
-                if countdown[k] == 0 && fatigue[k] <= self.wake_threshold {
+                if countdown[k] == 0 || fatigue[k] <= self.wake_threshold {
                     states[k] = ExpertState::Active;
+                    countdown[k] = 0;
                     fatigue[k] = 0.0;
+                }
+            } else {
+                // Passive wake decay
+                fatigue[k] = (fatigue[k] * (1.0 - self.decay_rate)).max(0.0);
+                if states[k] == ExpertState::Fatigued && fatigue[k] < self.fatigue_threshold * 0.7 {
+                    states[k] = ExpertState::Active;
                 }
             }
         }
+
+        newly_sleeping
     }
 }

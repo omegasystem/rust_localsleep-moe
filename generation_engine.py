@@ -4,6 +4,9 @@ import re
 import torch
 from typing import List, Dict, Tuple, Optional, Set, Any
 from transformers import AutoTokenizer
+from transformers import StoppingCriteria, StoppingCriteriaList
+from transformers import TextIteratorStreamer
+from threading import Thread
 
 from tools_harness import EmbodiedToolHarness
 from tool_parser import ToolCallParser
@@ -11,7 +14,8 @@ from session_logger import SessionLogger
 from swa_attention import trim_past_key_values_swa
 from cjk_cleaner import CJKStreamCleaner
 
-def prune_and_compress_history(conversation_history: list, tokenizer: AutoTokenizer, max_allowed_tokens: int = 1500) -> list:
+
+def prune_and_compress_history(conversation_history: list, tokenizer: Any, max_allowed_tokens: int = 1500) -> list:
     """
     動態對話歷史修剪與壓縮：
     保留最近的對話輪次，並確保歷史總 Token 不超過預算，為即將生成的大型 Code 預留足夠上下文窗口！
@@ -21,8 +25,11 @@ def prune_and_compress_history(conversation_history: list, tokenizer: AutoTokeni
 
     compressed_history = list(conversation_history)
     while len(compressed_history) > 2:
-        test_text = "".join([m["content"] for m in compressed_history])
-        num_toks = len(tokenizer.encode(test_text, add_special_tokens=False))
+        test_text = "".join([m.get("content", "") for m in compressed_history])
+        if tokenizer is not None and hasattr(tokenizer, "encode"):
+            num_toks = len(tokenizer.encode(test_text, add_special_tokens=False))
+        else:
+            num_toks = len(test_text) // 2
         if num_toks <= max_allowed_tokens:
             break
         compressed_history.pop(0)
@@ -30,6 +37,7 @@ def prune_and_compress_history(conversation_history: list, tokenizer: AutoTokeni
             compressed_history.pop(0)
 
     return compressed_history
+
 
 def format_prompt(
     user_prompt: str,
@@ -59,10 +67,12 @@ def format_prompt(
             formatted_messages = [{"role": "user", "content": f"{system_inst}\n\n{user_prompt}"}]
             return tokenizer.apply_chat_template(formatted_messages, tokenize=False, add_generation_prompt=True)
 
+
 class GenerationLoop:
     """
-    單輪推論生成循環核心：
+    單輪推論生成循環核心 (Local HF Eager / Custom Op Mode)：
     封裝 Rust Zero-GIL Routing、Dynamic LoRA、SWA 修剪、Tool 容錯攔截與抗漂移斷路器。
+    (已修復舊版同名 class GenerationLoop 覆蓋問題，並接入 Zero-GIL NREM 2:4 剪枝回呼)
     """
     def __init__(
         self,
@@ -130,7 +140,7 @@ class GenerationLoop:
         MAX_TOOL_CALLS_PER_TURN = 3
         recent_tool_actions = []
 
-        use_swa = (self.args.enable_swa and not self.args.disable_swa)
+        use_swa = (self.args.enable_swa and not getattr(self.args, "disable_swa", False))
 
         with torch.no_grad():
             for step in range(self.args.max_tokens):
@@ -160,12 +170,36 @@ class GenerationLoop:
                 last_hidden = outputs.hidden_states[-1][:, -1, :]
 
                 # 1. Rust Zero-GIL Routing (<8μs dispatch)
-                hidden_list = last_hidden.squeeze(0).float().cpu().tolist()
-                weights, selected_exp, entropy = self.rust_router.forward(hidden_list, 1)
-                self.rust_router.step_decay()
+                if hasattr(self.rust_router, "forward_from_token_logprobs"):
+                    # Avoid copying full 5376-dim tensor over PCIe: extract only top-8 logprobs on GPU
+                    top_vals, top_idxs = torch.topk(torch.log_softmax(logits[0], dim=-1), k=8)
+                    prev_tok_id = int(curr_input_ids[0, -1].item())
+                    weights, selected_exp, entropy = self.rust_router.forward_from_token_logprobs(
+                        prev_tok_id,
+                        top_idxs.tolist(),
+                        top_vals.float().tolist(),
+                    )
+                else:
+                    hidden_list = last_hidden.squeeze(0).float().cpu().tolist()
+                    weights, selected_exp, entropy = self.rust_router.forward(hidden_list, 1)
+
+                newly_sleeping = self.rust_router.step_decay()
+                if newly_sleeping and self.expert_pool is not None:
+                    for sleep_exp_id in newly_sleeping:
+                        exp_key = f"exp_{sleep_exp_id}"
+                        if exp_key in self.expert_pool.lora_a and hasattr(self.rust_router, "prune_gpu_tensor_24_ptr"):
+                            tensor_a = self.expert_pool.lora_a[exp_key].data
+                            if tensor_a.dtype == torch.float32 and tensor_a.is_cuda:
+                                self.rust_router.prune_gpu_tensor_24_ptr(
+                                    tensor_a.data_ptr(),
+                                    tensor_a.shape[0],
+                                    tensor_a.shape[1],
+                                    0.08,
+                                    0,
+                                )
 
                 # 2. Dynamic LoRA Modulation
-                if self.expert_pool is not None and not self.args.pure_routing and len(selected_exp) > 0 and len(weights) > 0:
+                if self.expert_pool is not None and not getattr(self.args, "pure_routing", False) and len(selected_exp) > 0 and len(weights) > 0:
                     top_exp = selected_exp[0]
                     top_weight = weights[0]
                     delta_h = self.expert_pool.forward_delta(last_hidden, top_exp, top_weight)
@@ -231,7 +265,6 @@ class GenerationLoop:
                         break
 
                 # 6. Tool Call 容錯偵測與即時攔截
-                # 只要出現閉合標籤或換行/turn結束符號，立即執行 Tool 判定
                 has_tool_signal = (
                     "</tool_call>" in accumulated_full_text
                     or ("<tool_call>" in accumulated_full_text and (
@@ -245,7 +278,6 @@ class GenerationLoop:
                 if has_tool_signal:
                     action, tool_output, clean_text = ToolCallParser.detect_and_execute(accumulated_full_text, self.harness)
                     if action and tool_output is not None:
-                        # 動作防漂移熔斷判定
                         norm_act_sig = f"{action}:{tool_output[:40]}"
                         if norm_act_sig in recent_tool_actions:
                             print(f"\n\n🛑 \033[1;31m[Anti-Drift Breaker]\033[0m 重複執行同一工具動作，強制終止當前輪次。")
@@ -261,13 +293,11 @@ class GenerationLoop:
 
                         print(f"\n📥 \033[1;32m[Tool Dispatched & Injected (#{tool_calls_count}) - {action}]:\033[0m\n{tool_output}\n")
 
-                        # 工具次數上限熔斷
                         if tool_calls_count >= MAX_TOOL_CALLS_PER_TURN or consecutive_tool_errors >= 2:
                             print(f"\n⚠️ \033[1;31m[Tool Breaker]\033[0m 達到單輪調用死限 ({tool_calls_count}/{MAX_TOOL_CALLS_PER_TURN})，停止推論。")
                             accumulated_full_text = clean_text + f"\n<circuit_breaker reason=\"max_tool_calls_reached\" />\n"
                             break
 
-                        # 角色閉環 Turn 切換與 KV-Cache 重新 Prefill 注入
                         injection_text = (
                             f"<end_of_turn>\n"
                             f"<start_of_turn>user\n"
@@ -279,7 +309,6 @@ class GenerationLoop:
                         )
                         tool_ids = self.tokenizer(injection_text, return_tensors="pt").input_ids.to(self.device)
 
-                        # 真正 Prefill 進 KV-Cache
                         prefill_outputs = self.model(
                             tool_ids,
                             past_key_values=past_key_values,
@@ -318,3 +347,89 @@ class GenerationLoop:
             )
 
         return accumulated_full_text, tokens_generated
+
+
+class AntiSeizureStoppingCriteria(StoppingCriteria):
+    """
+    動態防癲癇停止條件：
+    1. 捕捉指定的 stop_token_ids (如 <|im_end|>, <|eot_id|>)。
+    2. 檢測底層連續生成的 Token 模式，防止陷入無限 thought 迴圈。
+    """
+    def __init__(self, stop_token_ids: list[int], max_repeated_window: int = 50):
+        self.stop_token_ids = set(stop_token_ids)
+        self.max_repeated_window = max_repeated_window
+
+    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
+        last_token = input_ids[0, -1].item()
+        if last_token in self.stop_token_ids:
+            return True
+
+        if input_ids.shape[1] > self.max_repeated_window * 2:
+            recent_window = input_ids[0, -self.max_repeated_window:].tolist()
+            prev_window = input_ids[0, -(self.max_repeated_window * 2):-self.max_repeated_window].tolist()
+            if recent_window == prev_window:
+                return True
+
+        return False
+
+
+class HFStreamerGenerationLoop:
+    """
+    輕量 TextIteratorStreamer 生成包裝器（由原檔底部重複定義之 GenerationLoop 更名保留，避免覆蓋主引擎）
+    """
+    def __init__(self, model, tokenizer, profile_config: dict):
+        self.model = model
+        self.tokenizer = tokenizer
+
+        stop_tokens = profile_config.get("stop_tokens", ["<|im_end|>", "<|endoftext|>"])
+        self.stop_token_ids = []
+        for token_str in stop_tokens:
+            token_id = self.tokenizer.convert_tokens_to_ids(token_str)
+            if token_id is not None and token_id != self.tokenizer.unk_token_id:
+                self.stop_token_ids.append(token_id)
+
+        if hasattr(self.tokenizer, "eos_token_id") and self.tokenizer.eos_token_id:
+            self.stop_token_ids.append(self.tokenizer.eos_token_id)
+
+        self.stopping_criteria = StoppingCriteriaList([
+            AntiSeizureStoppingCriteria(self.stop_token_ids)
+        ])
+
+        hyperparams = profile_config.get("hyperparameters", {})
+        self.gen_kwargs = {
+            "max_new_tokens": hyperparams.get("max_generation_tokens", 2000),
+            "temperature": hyperparams.get("temperature", 0.6),
+            "top_p": hyperparams.get("top_p", 0.85),
+            "repetition_penalty": hyperparams.get("repetition_penalty", 1.05),
+            "stopping_criteria": self.stopping_criteria,
+            "do_sample": True
+        }
+
+    def generate_stream(self, messages: list[dict]):
+        prompt_tensor = self.tokenizer.apply_chat_template(
+            messages,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_tensors="pt"
+        ).to(self.model.device)
+
+        streamer = TextIteratorStreamer(self.tokenizer, skip_prompt=True, skip_special_tokens=False)
+        generation_kwargs = dict(
+            inputs=prompt_tensor,
+            streamer=streamer,
+            **self.gen_kwargs
+        )
+
+        thread = Thread(target=self.model.generate, kwargs=generation_kwargs)
+        thread.start()
+
+        full_text = ""
+        for new_text in streamer:
+            for stop_str in self.tokenizer.convert_ids_to_tokens(self.stop_token_ids):
+                if stop_str in new_text:
+                    new_text = new_text.replace(stop_str, "")
+
+            full_text += new_text
+            yield new_text, full_text
+
+        thread.join()

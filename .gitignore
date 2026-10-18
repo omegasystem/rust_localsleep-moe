@@ -11,3 +11,8 @@ checkpoints/
 .DS_Store
 venv/
 .venv/
+
+.venv_rust/
+.akashic.db
+isolated_output/
+sessions/

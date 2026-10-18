@@ -25,7 +25,18 @@ class EmbodiedToolHarness:
         self.isolated_output_dir = os.path.abspath(os.path.join(self.workspace_root, isolated_output_dir))
         self.session_logger = session_logger
         self.last_read_state = {}  # {normalized_path: next_offset} 自動記錄各檔案讀取指針
+
+        # --- 新增：防癲癇狀態記憶 (Circuit Breaker Memory) ---
+        self.action_history = []  # 記錄最近的 N 次行為 signature
+        self.max_repeated_actions = 3 # 允許完全相同動作的最大重複次數
+
         os.makedirs(self.isolated_output_dir, exist_ok=True)
+
+
+    def _generate_action_signature(self, action: str, args: dict) -> str:
+        """生成動作特徵碼，用於比對是否重複"""
+        # 排序 keys 以保證字典順序不同也能被識別為同一動作
+        return f"{action}:{json.dumps(args, sort_keys=True)}"
 
     def _resolve_safe_read_path(self, path: str) -> str:
         clean_path = path.strip().lstrip("/")
@@ -259,34 +270,60 @@ class EmbodiedToolHarness:
                 print(f"\n💾 \033[1;32m[Auto-Save XML Artifact (Isolated Sandbox)]\033[0m -> \033[1;36m{rel_path}\033[0m ({len(clean_content)} bytes)")
 
         return saved_artifacts
-
     def dispatch(self, action: str, args: dict) -> str:
-        if action == "read_file":
-            return self.read_file(
-                path=args.get("path", ""),
-                offset=args.get("offset", None),
-                limit=args.get("limit", 60),
-                chunk_size=args.get("chunk_size", None)
+        """
+        統一派發中心，包含防癲癇斷路器檢測。
+        """
+        # 1. 斷路器檢測 (Circuit Breaker)
+        sig = self._generate_action_signature(action, args)
+        self.action_history.append(sig)
+        
+        # 僅保留最近 10 次紀錄
+        if len(self.action_history) > 10:
+            self.action_history.pop(0)
+            
+        # 計算最近動作中，與本次相同的次數
+        recent_repeats = self.action_history.count(sig)
+        if recent_repeats > self.max_repeated_actions:
+            # 觸發斷路器，返回強制反省提示，並清空歷史以防卡死
+            self.action_history.clear()
+            return (
+                f"[Circuit Breaker Triggered] 你已經連續執行相同的動作 ({action}) 達 {recent_repeats} 次且未取得進展！"
+                "這表示你陷入了思考迴圈 (Hallucination Loop)。\n"
+                "!!! 強制指令 !!! 停止使用此工具，立即改用 `list_dir` 重新觀察目錄，或向使用者(Leon)提問。"
             )
-        elif action == "edit_file":
-            return self.edit_file(
-                path=args.get("path", ""),
-                old_text=args.get("old_text", ""),
-                new_text=args.get("new_text", ""),
-                replace_all=args.get("replace_all", False)
-            )
-        elif action == "write_file":
-            return self.write_file(args.get("path", ""), args.get("content", ""))
-        elif action == "list_dir":
-            return self.list_dir(args.get("path", "."))
-        elif action == "web_search":
-            return self.web_search(args.get("query", ""))
-        elif action == "recall_sessions":
-            if self.session_logger:
-                return self.session_logger.recall_recent_sessions(limit=args.get("limit", 5))
-            return "[Error: session_logger not attached to harness]"
-        elif action == "recall_search":
-            if self.session_logger:
-                return self.session_logger.recall_search(query=args.get("query", ""), max_matches=args.get("max_matches", 3))
-            return "[Error: session_logger not attached to harness]"
-        return f"[Unknown Tool: {action}]"
+
+        # 2. 正常工具派發
+        try:
+            if action == "read_file":
+                return self.read_file(
+                    path=args.get("path", ""),
+                    offset=args.get("offset"),
+                    limit=args.get("limit", 150),
+                    chunk_size=args.get("chunk_size")
+                )
+            elif action == "edit_file":
+                return self.edit_file(
+                    path=args.get("path", ""),
+                    old_text=args.get("old_text", ""),
+                    new_text=args.get("new_text", ""),
+                    replace_all=args.get("replace_all", False)
+                )
+            elif action == "write_file":
+                return self.write_file(args.get("path", ""), args.get("content", ""))
+            elif action == "list_dir":
+                return self.list_dir(args.get("path", "."))
+            elif action == "web_search":
+                return self.web_search(args.get("query", ""), args.get("max_results", 5))
+            elif action == "recall_sessions":
+                if self.session_logger:
+                    return self.session_logger.recall_recent_sessions(limit=args.get("limit", 5))
+                return "[Error: session_logger not attached]"
+            elif action == "recall_search":
+                if self.session_logger:
+                    return self.session_logger.recall_search(query=args.get("query", ""), max_matches=args.get("max_matches", 3))
+                return "[Error: session_logger not attached]"
+            else:
+                return f"[Unknown Tool: {action}]"
+        except Exception as e:
+            return f"[Tool Execution Exception: {str(e)}]"

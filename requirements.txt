@@ -9,22 +9,26 @@
 torch>=2.5.0
 torchvision
 
-# Rust <-> Python PyO3 Bridge Tools (Required for localsleep_rs compilation)
+# Rust <-> Python PyO3 Bridge Tools (Required for rust_localsleep_moe compilation)
 maturin>=1.5.0
 patchelf>=0.17.2
 
 # Hugging Face Model Loading & Tokenization
 transformers>=4.36.0
-accelerate>=0.26.0
+accelerate>=0.34.0
 safetensors>=0.4.1
 sentencepiece>=0.1.99
 protobuf>=3.20.0
 huggingface_hub>=0.19.0
 
 # Quantization & Acceleration Kernels
-bitsandbytes>=0.42.0
+bitsandbytes>=0.44.0
 compressed-tensors>=0.6.0
 
 # Utilities & Multimodal Support
 Pillow>=10.0.0
 numpy>=1.24.0
+
+# Optional vLLM Backend (Commented out by default; Hybrid Mode uses TensorRT-Edge-LLM Server)
+# vllm>=0.6.4.post1
+# vllm-flash-attn>=2.6.2

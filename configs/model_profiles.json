@@ -1,6 +1,46 @@
 {
   "profiles": {
+    "thor_31b_trt": {
+      "backend": "trt-edgellm",
+      "server_url": "http://192.168.50.67:8000",
+      "model_id": "gemma-4-31B-it",
+      "model_path": "/home/omegacd/local_models/gemma-4-31B-it",
+      "dtype": "bfloat16",
+      "device_map": "auto",
+      "hidden_dim": 5376,
+      "num_experts": 8,
+      "top_k": 2,
+      "lora_rank": 32,
+      "lora_alpha": 64.0,
+      "fatigue_threshold": 1.6,
+      "wake_threshold": 0.35,
+      "decay_rate": 0.015,
+      "sleep_duration": 25,
+      "shy_lambda": 0.08,
+      "enable_2_4_sparsity": true,
+      "enable_swa": true,
+      "swa_window_size": 4096,
+      "swa_sink_size": 4,
+      "telemetry_port": 8765,
+      "hyperparameters": {
+        "max_context_tokens": 32768,
+        "max_generation_tokens": 2048,
+        "temperature": 0.6,
+        "top_p": 0.9,
+        "top_k": 50,
+        "repetition_penalty": 1.0
+      },
+      "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n若需執行工具，請輸出：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\"}}</tool_call>\n若需生成並儲存程式碼檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
+      "stop_tokens": [
+        "<end_of_turn>",
+        "<|im_end|>",
+        "<|endoftext|>"
+      ]
+    },
     "thor_12b": {
+      "backend": "local-hf",
+      "server_url": "http://192.168.50.67:8000",
+      "model_id": "gemma-4-12B-it",
       "model_path": "/home/omegacd/local_models/gemma-4-12B-it",
       "dtype": "bfloat16",
       "device_map": "auto",
@@ -21,6 +61,9 @@
       "telemetry_port": 8765
     },
     "thor_31b": {
+      "backend": "trt-edgellm",
+      "server_url": "http://192.168.50.67:8000",
+      "model_id": "gemma-4-31B-it",
       "model_path": "/home/omegacd/local_models/gemma-4-31B-it",
       "dtype": "bfloat16",
       "device_map": "auto",
@@ -29,18 +72,33 @@
       "top_k": 2,
       "lora_rank": 32,
       "lora_alpha": 64.0,
-      "fatigue_threshold": 2.5,
-      "wake_threshold": 0.4,
-      "decay_rate": 0.01,
-      "sleep_duration": 40,
+      "fatigue_threshold": 1.6,
+      "wake_threshold": 0.35,
+      "decay_rate": 0.015,
+      "sleep_duration": 25,
       "shy_lambda": 0.08,
       "enable_2_4_sparsity": true,
       "enable_swa": true,
       "swa_window_size": 4096,
       "swa_sink_size": 4,
-      "telemetry_port": 8765
+      "telemetry_port": 8765,
+      "hyperparameters": {
+        "max_context_tokens": 32768,
+        "max_generation_tokens": 2048,
+        "temperature": 0.6,
+        "top_p": 0.9,
+        "top_k": 50,
+        "repetition_penalty": 1.0
+      },
+      "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n若需執行工具，請輸出：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\"}}</tool_call>\n若需生成並儲存程式碼檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
+      "stop_tokens": [
+        "<end_of_turn>",
+        "<|im_end|>",
+        "<|endoftext|>"
+      ]
     },
     "thor_26b_a4b": {
+      "backend": "local-hf",
       "model_path": "/home/omegacd/local_models/gemma-4-26b-a4b",
       "dtype": "bfloat16",
       "device_map": "auto",
@@ -59,6 +117,36 @@
       "swa_window_size": 2048,
       "swa_sink_size": 4,
       "telemetry_port": 8765
+    },
+    "qwen3_30b_a3b": {
+      "backend": "vllm",
+      "model_id": "Qwen/Qwen3-30B-A3B",
+      "description": "Qwen3 MoE Architecture (30B Total / 3B Active). Optimized for fast agentic reasoning.",
+      "hyperparameters": {
+        "max_context_tokens": 32768,
+        "max_generation_tokens": 4096,
+        "temperature": 0.6,
+        "top_p": 0.85,
+        "repetition_penalty": 1.05,
+        "num_experts": 10,
+        "active_experts": 1
+      },
+      "system_prompt": "你是數位黑貓 Kuro，Leon(主人)的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n支援 Tool Call:\n<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\"}}</tool_call>\n以冷靜、極具神經深度的正體中文回答，嚴禁註記與自言自語。",
+      "stop_tokens": [
+        "<|im_end|>",
+        "<|endoftext|>",
+        "<|im_start|>"
+      ],
+      "chat_template": {
+        "system_format": "<|im_start|>system\n{content}<|im_end|>\n",
+        "user_format": "<|im_start|>user\n{content}<|im_end|>\n",
+        "assistant_format": "<|im_start|>assistant\n{content}",
+        "tool_syntax": {
+          "type": "xml_json_hybrid",
+          "call_regex": "<tool_call>\\s*(\\{.*?\\})\\s*(?:</tool_call>|$)",
+          "response_template": "<|im_end|>\n<|im_start|>tool\n{tool_output}<|im_end|>\n<|im_start|>assistant\n"
+        }
+      }
     }
   }
 }

@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-// 1. Fused Fatigue-Aware Top-K Gating Kernel
+// 1. Fused Fatigue-Aware Top-K Gating Kernel (<6.5us)
 void launch_fused_fatigue_topk(
     const float* d_gate_logits,      // [batch, num_experts]
     const int32_t* d_expert_states,  // [num_experts] (0=Active, 1=Fatigued, 2=Sleep)
@@ -36,10 +36,27 @@ void launch_sparse_expert_gather(
     void* cuda_stream
 );
 
-// 3. Fused Fisher Information & 2:4 Structural Pruning Kernel
+// 2b. Full Low-Rank LoRA Slab Gather-Projection Kernel:
+// Computes d_output_delta[b, d] = sum_{k=0..top_k-1} w_{b,k} * scaling * ((h_b @ A_{exp_k}^T) @ B_{exp_k}^T)_d
+void launch_sparse_lora_gather_f32(
+    const float* d_input_hidden,     // [batch, hidden_dim]
+    const float* d_lora_a,           // [num_experts, rank, hidden_dim]
+    const float* d_lora_b,           // [num_experts, hidden_dim, rank]
+    const float* d_routing_weights,  // [batch, top_k]
+    const int32_t* d_selected_exp,   // [batch, top_k]
+    float* d_output_delta,           // [batch, hidden_dim]
+    int batch_size,
+    int hidden_dim,
+    int rank,
+    int top_k,
+    float scaling,
+    void* cuda_stream
+);
+
+// 3. Fused Fisher Information & 2:4 Structural Pruning + SHY Downscaling Kernel
 void launch_fisher_downscaler_24(
-    float* d_weights,                // [rows, cols]
-    const float* d_fisher_diag,      // [rows, cols]
+    float* d_weights,                // [rows, cols] (must be multiple of 4)
+    const float* d_fisher_diag,      // [rows, cols] (if NULL, estimated inline from weight magnitude)
     float shy_lambda,
     int rows,
     int cols,
