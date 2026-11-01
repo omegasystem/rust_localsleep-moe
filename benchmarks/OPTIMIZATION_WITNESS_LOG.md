@@ -318,3 +318,51 @@
 🏁 [Hybrid Turn Complete] Tokens: 4084 | Elapsed: 257.75s (15.84 tps) | TTFT: 1382.7ms | Top-2: [7, 0, 14, 1, 10] (H=2.099)
 
 ```
+
+### 🔹 Run `2026-11-01 22:36:41` (`thor_31b_20261101_223332` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 656 | Elapsed: 72.22s (9.08 tps) | TTFT: 938.3ms | Top-2: [4, 3, 1, 15, 0] (H=2.153)
+
+```
+
+### 🔹 Run `2026-11-01 22:50:10` (`thor_31b_20261101_224612` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1440 | Elapsed: 153.84s (9.36 tps) | TTFT: 859.1ms | Top-2: [0, 6, 12, 3, 15] (H=2.124)
+
+```
+
+### 🔹 Run `2026-11-01 22:52:22` (`thor_31b_20261101_224612` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 336 | Elapsed: 19.14s (17.56 tps) | TTFT: 194.2ms | Top-2: [5, 8, 7] (H=2.068)
+
+```
+
+### 🔹 Run `2026-11-01 22:54:27` (`gpt1900_3b_20261101_225408` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 40 | Elapsed: 4.99s (8.02 tps) | TTFT: 44.6ms | Top-2: [5, 8, 15, 2, 12, 9] (H=2.601)
+
+```
+
+### 🔹 Run `2026-11-01 22:56:49` (`gpt1900_3b_20261101_225408` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1440 | Elapsed: 136.61s (10.54 tps) | TTFT: 58.5ms | Top-2: [7, 12, 13, 2, 8] (H=2.082)
+
+```
+
+### 🔹 Run `2026-11-01 23:01:37` (`thor_31b_20261101_225900` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1440 | Elapsed: 138.41s (10.40 tps) | TTFT: 545.2ms | Top-2: [12, 8, 5, 11, 2] (H=2.123)
+
+```
+
+### 🔹 Run `2026-11-01 23:35:53` (`gpt1900_3b_20261101_233433` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 875 | Elapsed: 70.15s (12.47 tps) | TTFT: 42.2ms | Top-2: [2, 4, 6, 1, 14] (H=2.141)
+
+```
+
+### 🔹 Run `2026-11-01 23:44:30` (`thor_31b_20261101_234130` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2534 | Elapsed: 168.32s (15.05 tps) | TTFT: 2280.6ms | Top-2: [14, 7, 0, 8, 13] (H=2.090)
+
+```
