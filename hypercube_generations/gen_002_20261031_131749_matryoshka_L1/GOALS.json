@@ -1,0 +1,33 @@
+{
+  "cube_id": "gen_002_20261031_131749_matryoshka_L1",
+  "parent_cube_id": "gen_001_20261031_123813_hypercube_rsi",
+  "generation": 2,
+  "created_at": "2026-10-31T13:17:49",
+  "goals": [
+    {
+      "id": "G1",
+      "title": "唯讀吸收母體架構與 2:4 穩態剪枝拓撲",
+      "module": "src/downscaler.rs & csrc/sparse_expert_gather.cu",
+      "status": "COMPLETED",
+      "priority": "HIGH",
+      "description": "解析母體 FatigueMoERouter 與 2:4 SHY 指數收縮公式，找出可自適應調節學習率/衰減率之改良空間。"
+    },
+    {
+      "id": "G2",
+      "title": "演化子代動態自我調節突觸模組 (Self-Adaptive Homeostasis)",
+      "module": "evolved_homeostasis.py",
+      "status": "COMPLETED",
+      "priority": "HIGH",
+      "description": "在子代專案中生成可根據 Shannon Entropy 波動率動態微調 SHY lambda 與專家喚醒閾值的強化模組。"
+    },
+    {
+      "id": "G3",
+      "title": "執行子代自動化收斂與正交性驗證閘門 (Verification Gate)",
+      "module": "tests/verify_offspring_cube.py",
+      "status": "PENDING",
+      "priority": "CRITICAL",
+      "description": "在子代沙盒內獨立執行數值與語法測試，確保無 NaN/Underflow 且正交分數優於或等於母體，方可標記為 READY_FOR_SWAP。"
+    }
+  ],
+  "updated_at": "2026-10-31T13:18:15"
+}

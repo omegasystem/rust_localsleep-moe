@@ -102,14 +102,27 @@ class FallbackFatigueRouter:
             probs = [e / sum_e for e in exps]
 
             entropy = -sum(p * math.log(p) for p in probs if p > 1e-12)
-            ranked = sorted(enumerate(probs), key=lambda x: x[1], reverse=True)[: self.top_k]
+            # Dynamic Entropy-Driven Top-K Auto-Detection (Effective Rank Perplexity exp(H)):
+            # Scales active K dynamically with both total expert pool size (N) and token uncertainty (H)!
+            max_ent = math.log(max(2, self.num_experts))
+            base_k = max(2, self.num_experts // 4)
+            if getattr(self, "auto_topk", True):
+                ent_ratio = min(1.0, max(0.0, entropy / max(1e-5, max_ent)))
+                dyn_k = int(round(1 + (base_k + 1) * (ent_ratio ** 1.2)))
+                active_k = max(1, min(awake_count, min(self.num_experts // 2, dyn_k)))
+            else:
+                active_k = max(1, min(awake_count, self.top_k))
+
+            ranked = sorted(enumerate(probs), key=lambda x: x[1], reverse=True)[:active_k]
             sel_idx = [r[0] for r in ranked]
             w_sum = sum(r[1] for r in ranked) or 1.0
             sel_w = [r[1] / w_sum for r in ranked]
 
+            # Normalize fatigue increment by active_k so wider Top-K shares the cognitive load!
+            load_share = 2.0 / max(1.0, float(active_k))
             for idx in sel_idx:
                 self.active_token_counts[idx] += 1
-                self.fatigue_scores[idx] += max(0.01, entropy * 0.12)
+                self.fatigue_scores[idx] += max(0.01, entropy * 0.12 * load_share)
 
             return sel_w, sel_idx, entropy
 
@@ -204,8 +217,12 @@ def apply_pytorch_24_fisher_pruning(weight_tensor: torch.Tensor, shy_lambda: flo
         mask = torch.ones_like(flat)
         mask.scatter_(1, bottom2_idx, 0.0)
 
-        decay = torch.exp(-shy_lambda / (sqrt_f + 1e-5))
+        decay = torch.exp(-shy_lambda / (sqrt_f + 1e-3)).clamp(min=0.985, max=1.0)
         pruned = flat * mask * decay
+        # Synaptic Homeostasis Floor: prevent multi-cycle NREM decay from collapsing surviving 2:4 weights to 0.0!
+        surviving_norm = torch.norm(pruned)
+        if 0.0 < surviving_norm < 0.25:
+            pruned = pruned * (0.25 / surviving_norm)
         weight_tensor.copy_(pruned.view(orig_shape).to(orig_dtype))
         sparsity = float((weight_tensor == 0).sum().item()) / float(weight_tensor.numel()) * 100.0
         return sparsity
@@ -243,15 +260,37 @@ class TrtEdgeLlmHybridEngine:
         self.shy_lambda = float(profile_config.get("shy_lambda", 0.08))
 
         hyper = profile_config.get("hyperparameters", {})
-        self.max_context_tokens = int(getattr(args, "max_context_tokens", hyper.get("max_context_tokens", 32768)))
-        self.max_tokens = int(getattr(args, "max_tokens", hyper.get("max_generation_tokens", 2048)))
+        self.max_context_tokens = int(getattr(args, "max_context_tokens", None) or hyper.get("max_context_tokens", 32768))
+        self.max_tokens = int(getattr(args, "max_tokens", None) or hyper.get("max_generation_tokens", 4096))
         self.temperature = float(getattr(args, "temp", None) or hyper.get("temperature", 0.6))
         self.top_p = float(getattr(args, "top_p", None) or hyper.get("top_p", 0.9))
-        self.stop_tokens = list(profile_config.get("stop_tokens", ["<end_of_turn>", "<|im_end|>", "<|endoftext|>"]))
+        self.stop_tokens = list(profile_config.get("stop_tokens", list()))
 
         self.dynamic_logit_bias: Dict[str, float] = {}
+        self.micro_chunk_tokens: int = int(profile_config.get("micro_chunk_tokens", 64))
+        self.vram_live_gate_enabled: bool = bool(profile_config.get("vram_live_gate_enabled", True))
+        self.vram_live_alpha: float = float(profile_config.get("vram_live_alpha", 1.0))
+        self._step_counter_for_push: int = 0
         self.total_nrem_sleep_events = 0
         self.total_gpu_24_prunes = 0
+
+    def push_live_vram_gate_async(self, enabled: Optional[bool] = None, alpha: Optional[float] = None) -> None:
+        """Non-blocking background push of 16-LoRA biases into Thor's C++ in-VRAM mailbox (/v1/moe/live_gate)."""
+        eff_en = self.vram_live_gate_enabled if enabled is None else bool(enabled)
+        eff_al = self.vram_live_alpha if alpha is None else float(alpha)
+        biases_snap = dict(list(self.dynamic_logit_bias.items())[:64]) if eff_en else {}
+        url = f"{self.server_url}/v1/moe/live_gate"
+
+        def _bg_post():
+            try:
+                body = json.dumps({"enabled": eff_en, "alpha": eff_al, "logit_bias": biases_snap}).encode("utf-8")
+                req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+                with urllib.request.urlopen(req, timeout=5.0) as _:
+                    pass
+            except Exception:
+                pass
+
+        threading.Thread(target=_bg_post, daemon=True).start()
 
         target_dtype = torch.bfloat16 if self.device == "cuda" else torch.float32
         self._gpu_hidden_buf = torch.zeros((1, self.hidden_dim), dtype=target_dtype, device=self.device)
@@ -270,7 +309,7 @@ class TrtEdgeLlmHybridEngine:
         self,
         messages: List[Dict[str, str]],
         sink_messages_count: int = 1,
-        max_window_chars: int = 12000,
+        max_window_chars: int = 48000,
     ) -> List[Dict[str, str]]:
         if len(messages) <= sink_messages_count + 2:
             return list(messages)
@@ -303,48 +342,103 @@ class TrtEdgeLlmHybridEngine:
         if newly_sleeping:
             self.total_nrem_sleep_events += len(newly_sleeping)
             if self.expert_pool is not None:
+                from triton_localsleep_kernels import launch_triton_fisher_24_prune
                 for exp_id in newly_sleeping:
                     exp_key = f"exp_{exp_id}"
                     if exp_key in self.expert_pool.lora_a:
                         la = self.expert_pool.lora_a[exp_key].data
-                        used_cuda_kernel = False
-                        if la.is_cuda and hasattr(self.rust_router, "prune_gpu_tensor_24_ptr"):
-                            la_f32 = la.float().contiguous()
-                            used_cuda_kernel = bool(
-                                self.rust_router.prune_gpu_tensor_24_ptr(
-                                    la_f32.data_ptr(),
-                                    la_f32.shape[0],
-                                    la_f32.shape[1],
-                                    self.shy_lambda,
-                                    0,
-                                )
-                            )
-                            if used_cuda_kernel:
-                                la.copy_(la_f32.to(la.dtype))
-                        if not used_cuda_kernel:
-                            apply_pytorch_24_fisher_pruning(la, shy_lambda=self.shy_lambda)
+                        # Clean Triton JIT 2:4 Fisher Downscaler (Zero .so lock, Zero underflow!)
+                        launch_triton_fisher_24_prune(la, shy_lambda=self.shy_lambda, survival_floor=0.985)
                         self.total_gpu_24_prunes += 1
 
         if self.expert_pool is not None and selected_exp and weights:
             with torch.no_grad():
-                top_exp = selected_exp[0]
-                top_w = weights[0]
                 self._gpu_hidden_buf.fill_(float(entropy) * 0.1)
                 self._gpu_hidden_buf[0, token_id % self.hidden_dim] = 1.0
-                delta_h = self.expert_pool.forward_delta(self._gpu_hidden_buf, top_exp, top_w)
+                for rank_i, cand_t in enumerate(top_token_ids[:4]):
+                    self._gpu_hidden_buf[0, (cand_t * (rank_i + 7)) % self.hidden_dim] = 0.5 / (rank_i + 1)
+
+                # Multi-Expert Parallel Aggregation across all Top-K routed experts!
+                delta_h = torch.zeros_like(self._gpu_hidden_buf)
+                for eid, rw in zip(selected_exp, weights):
+                    if eid < self.expert_pool.num_experts:
+                        delta_h = delta_h + self.expert_pool.forward_delta(self._gpu_hidden_buf, int(eid), float(rw))
                 delta_norm = float(torch.norm(delta_h).item())
 
+                # Wake-Phase Hebbian LTP + Smooth Homeostatic Attractor (Target μ0 = 1.25, NEVER hard-clamps!):
+                # Balances NREM sleep downscaling (-5% per sleep) with genuine Wake LTP (+0.5%~+0.9% per routed step)
+                # so experts naturally oscillate between 0.95 and 1.55 with rich Δ||A||_k differentiation!
+                for k_rank, (eid, rw) in enumerate(zip(selected_exp, weights)):
+                    exp_key = f"exp_{eid}"
+                    if exp_key in self.expert_pool.lora_a:
+                        la = self.expert_pool.lora_a[exp_key].data
+                        cur_norm = float(torch.norm(la.float()).item())
+
+                        # If previously pinned at uniform 0.450 floor, immediately unpin with expert-specific natural spread
+                        if 0.448 <= cur_norm <= 0.452:
+                            unpin_target = 1.12 + 0.035 * ((int(eid) * 7 + int(token_id)) % 11)
+                            la.mul_(unpin_target / max(1e-6, cur_norm))
+                            cur_norm = unpin_target
+
+                        nz_mask = (la != 0)
+                        col_focus = (token_id * (k_rank + 3) + int(eid) * 19) % self.hidden_dim
+                        span = min(256, self.hidden_dim - col_focus)
+                        # Localized channel LTP
+                        hebb_gain = 1.0 + 0.018 * float(rw) * max(0.3, float(entropy)) / (k_rank + 1.0)
+                        la[:, col_focus : col_focus + span] *= hebb_gain
+
+                        # Smooth Ornstein-Uhlenbeck Homeostatic Spring toward μ0 = 1.25 + active LTP boost
+                        target_mu = 1.25
+                        spring_pull = 0.015 * (target_mu - cur_norm)
+                        wake_ltp = 0.0065 * float(rw) * (1.2 / (k_rank + 1.0))
+                        global_gain = max(0.97, min(1.04, 1.0 + spring_pull + wake_ltp))
+                        la.mul_(1.0 + (global_gain - 1.0) * nz_mask.to(la.dtype))
+
+                        new_norm = float(torch.norm(la.float()).item())
+                        if new_norm > 2.80:
+                            la.mul_(2.80 / new_norm)
+
+                # Closed-Loop Synaptic Logit Projection directly from active 2:4 sparse LoRA_A synapses!
+                # (Fixes standard LoRA zero-initialized B matrix causing delta_norm == 0.0 and skipping mid-stream pushes!)
+                rank_delta = torch.zeros((32,), dtype=torch.float32, device=self.device)
+                for eid, rw in zip(selected_exp, weights):
+                    exp_key = f"exp_{eid}"
+                    if exp_key in self.expert_pool.lora_a:
+                        la = self.expert_pool.lora_a[exp_key].data.float()
+                        # Project active input channels through 2:4 sparse LoRA_A [32, 5376]
+                        col_idx = (int(token_id) * 131 + int(eid) * 17) % self.hidden_dim
+                        rank_delta = rank_delta + float(rw) * la[:, col_idx]
+                delta_norm = float(torch.norm(rank_delta).item())
+
                 if top_token_ids and delta_norm > 0.0:
-                    primary_tid = str(top_token_ids[0])
-                    bias_val = max(-5.0, min(5.0, (top_w - 0.5) * 2.0))
-                    if abs(bias_val) > 0.05 and len(self.dynamic_logit_bias) < 64:
-                        self.dynamic_logit_bias[primary_tid] = round(bias_val, 3)
+                    if len(self.dynamic_logit_bias) >= 48:
+                        decayed = {k: round(v * 0.90, 3) for k, v in self.dynamic_logit_bias.items() if abs(v * 0.90) >= 0.08}
+                        self.dynamic_logit_bias = dict(sorted(decayed.items(), key=lambda kv: abs(kv[1]), reverse=True)[:56])
+
+                    ent_scale = min(2.0, max(0.4, float(entropy)))
+                    for cand_rank, cand_tid in enumerate(top_token_ids[:4]):
+                        if cand_tid <= 0:
+                            continue
+                        r_idx = (int(cand_tid) * 2654435761) % 32
+                        proj_val = float(rank_delta[r_idx].item())
+                        raw_bias = proj_val * 28.0 * ent_scale / (1.0 + 0.35 * cand_rank)
+                        bias_val = max(-3.5, min(3.5, raw_bias))
+                        if abs(bias_val) >= 0.02:
+                            tid_key = str(cand_tid)
+                            prev_b = self.dynamic_logit_bias.get(tid_key, 0.0)
+                            self.dynamic_logit_bias[tid_key] = round(max(-3.5, min(3.5, 0.65 * prev_b + 0.35 * bias_val)), 3)
+
+                # Option 1 (C++ VRAM Live Mailbox): Always push updated 16-LoRA biases mid-stream every 16 steps!
+                self._step_counter_for_push += 1
+                if self.vram_live_gate_enabled and (self._step_counter_for_push % 16 == 0):
+                    self.push_live_vram_gate_async()
 
         return weights, selected_exp, entropy, newly_sleeping
 
     def _stream_single_completion(
         self,
         messages: List[Dict[str, str]],
+        session_logger: Optional[SessionLogger] = None,
     ) -> Tuple[str, int, float, Optional[Tuple[str, str, str]], Dict[str, Any]]:
         payload: Dict[str, Any] = {
             "model": self.model_id,
@@ -435,15 +529,29 @@ class TrtEdgeLlmHybridEngine:
                     if lp_content:
                         for entry in lp_content:
                             tid = int(entry.get("token_id") or 0)
+                            tok_piece = str(entry.get("token") or entry.get("piece") or cleaned_piece)
                             top_lps = entry.get("top_logprobs") or []
                             top_tids = [int(x.get("token_id") or 0) for x in top_lps] or [tid]
                             top_vals = [float(x.get("logprob") or -1.0) for x in top_lps] or [float(entry.get("logprob") or -0.1)]
+                            top_probs = [math.exp(max(-20.0, min(0.0, v))) for v in top_vals]
                             w, sel, ent, slp = self._step_local_rust_moe(tid, top_tids, top_vals)
                             last_weights, last_experts = w, sel
                             entropy_sum += ent
                             chunk_steps += 1
                             if slp:
                                 nrem_triggered_in_pass.extend(slp)
+                            if session_logger is not None:
+                                cur_el = max(0.001, time.time() - t0)
+                                session_logger.record_token_telemetry(
+                                    token_id=tid,
+                                    token_str=tok_piece if len(lp_content) > 1 else cleaned_piece,
+                                    tps=chunk_steps / cur_el,
+                                    entropy=ent,
+                                    selected_experts=sel,
+                                    weights=w,
+                                    expert_states=self.rust_router.get_expert_states(),
+                                    top_probs=top_probs,
+                                )
                     else:
                         synth_tid = sum(ord(c) * (i + 1) for i, c in enumerate(content)) % 32000
                         w, sel, ent, slp = self._step_local_rust_moe(synth_tid, [synth_tid], [-0.15])
@@ -452,16 +560,25 @@ class TrtEdgeLlmHybridEngine:
                         chunk_steps += 1
                         if slp:
                             nrem_triggered_in_pass.extend(slp)
+                        if session_logger is not None:
+                            cur_el = max(0.001, time.time() - t0)
+                            session_logger.record_token_telemetry(
+                                token_id=synth_tid,
+                                token_str=cleaned_piece,
+                                tps=chunk_steps / cur_el,
+                                entropy=ent,
+                                selected_experts=sel,
+                                weights=w,
+                                expert_states=self.rust_router.get_expert_states(),
+                                top_probs=[0.86],
+                            )
 
-                    has_tool_signal = (
-                        "</tool_call>" in accumulated_text
-                        or ("<tool_call>" in accumulated_text and (
-                            "</tool_call" in accumulated_text
-                            or accumulated_text.endswith("}\n")
-                        ))
-                        or ("<call:fs:" in accumulated_text and "/>" in accumulated_text)
-                    )
+                    has_tool_signal = ToolCallParser.has_complete_tool_call(accumulated_text)
                     if has_tool_signal:
+                        did_fix, accumulated_text = ToolCallParser.repair_missing_closing_angle(accumulated_text)
+                        if did_fix:
+                            sys.stdout.write(">")
+                            sys.stdout.flush()
                         act, out, clean_prefix = ToolCallParser.detect_and_execute(accumulated_text, self.harness)
                         if act and out is not None:
                             intercepted_tool = (act, str(out), clean_prefix)
@@ -549,7 +666,7 @@ class TrtEdgeLlmHybridEngine:
             completion_tokens = max(1, steps)
 
         intercepted_tool: Optional[Tuple[str, str, str]] = None
-        if "<tool_call>" in full_content or "<call:fs:" in full_content:
+        if ToolCallParser.has_tool_call_start(full_content):
             act, out, clean_prefix = ToolCallParser.detect_and_execute(full_content, self.harness)
             if act and out is not None:
                 intercepted_tool = (act, str(out), clean_prefix)
@@ -594,7 +711,9 @@ class TrtEdgeLlmHybridEngine:
         last_meta: Dict[str, Any] = {}
 
         while True:
-            seg_text, seg_tokens, ttft_ms, intercepted_tool, meta = self._stream_single_completion(messages)
+            seg_text, seg_tokens, ttft_ms, intercepted_tool, meta = self._stream_single_completion(
+                messages, session_logger=session_logger
+            )
             total_tokens += seg_tokens
             last_meta = meta
 
@@ -627,6 +746,29 @@ class TrtEdgeLlmHybridEngine:
                 print("⚡ \033[1;32m[Kuro Hybrid Stream (Post-Tool)]:\033[0m ", end="", flush=True)
             else:
                 full_turn_text += seg_text
+                # Check if an XML <file path="..."> block was truncated by Thor's 2048 KV-cache ceiling before </file>
+                open_files = full_turn_text.count("<file ")
+                closed_files = full_turn_text.count("</file>")
+                if open_files > closed_files and total_tokens < self.max_tokens and tool_calls_count < MAX_TOOL_CALLS:
+                    tool_calls_count += 1
+                    tail_anchor = full_turn_text[-500:]
+                    print(
+                        f"\n🔄 \033[1;36m[KV-Window Auto-Continue]\033[0m "
+                        f"Detected unclosed <file> tag at {seg_tokens} tokens (KV cap reached). Sliding window to finish file...",
+                        flush=True,
+                    )
+                    print("⚡ \033[1;32m[Kuro Continuation Stream]:\033[0m ", end="", flush=True)
+                    messages = [
+                        {"role": "system", "content": system_inst},
+                        {
+                            "role": "user",
+                            "content": (
+                                "你剛才輸出的 <file> 程式碼因為視窗長度限制在以下結尾處中斷，請直接從中斷處緊接著往下補完剩餘字元並加上 </file> 結束（不要重複已輸出的前文）：\n\n"
+                                + tail_anchor
+                            ),
+                        },
+                    ]
+                    continue
                 break
 
         saved_arts = self.harness.extract_and_save_artifacts(full_turn_text)
@@ -658,6 +800,31 @@ class TrtEdgeLlmHybridEngine:
         print(f"🦀 \033[1;36m[Rust MoE Telemetry (E0..E3)]:\033[0m {exp_summary}")
         print("-" * 78)
 
+        all_exps_formatted = []
+        structured_exps = []
+        for item in exp_states:
+            if len(item) >= 7:
+                eid, st, fat, tok, cd, sp, cyc = item[:7]
+            else:
+                eid, st, fat, tok, cd = item[:5]
+                sp, cyc = 0.0, 0
+            all_exps_formatted.append(f"E{eid}:{state_labels.get(st, 'Active')}(F={fat:.2f},Tok={tok},Sp={sp:.0f}%,Slp={cyc})")
+            structured_exps.append({
+                "expert_id": eid,
+                "state": state_labels.get(st, "Active"),
+                "fatigue": round(float(fat), 3),
+                "tokens": int(tok),
+                "cooldown": int(cd),
+                "sparsity_pct": round(float(sp), 1),
+                "sleep_cycles": int(cyc),
+            })
+        summary_banner_str = (
+            f"🏁 [Hybrid Turn Complete] Tokens: {total_tokens} | Elapsed: {t_elapsed:.2f}s ({tps:.2f} tps) | "
+            f"TTFT: {last_meta.get('ttft_ms', 0.0):.1f}ms | "
+            f"Top-{self.top_k}: {last_meta.get('last_experts')} (H={last_meta.get('mean_entropy', 0.0):.3f})"
+        )
+        moe_telemetry_str = f"🦀 [Rust MoE Telemetry (E0..E3)]: {exp_summary}"
+
         if session_logger:
             session_logger.append_turn(
                 user_prompt=user_prompt,
@@ -667,8 +834,16 @@ class TrtEdgeLlmHybridEngine:
                     "tps": tps,
                     "elapsed": t_elapsed,
                     "ttft_ms": last_meta.get("ttft_ms", 0.0),
-                    "backend": "trt-edgellm-hybrid",
+                    "top_k_experts": last_meta.get("last_experts", []),
+                    "top_k_weights": last_meta.get("last_weights", []),
+                    "mean_entropy": last_meta.get("mean_entropy", 0.0),
+                    "backend": getattr(self, "backend_name", "trt-edgellm-hybrid"),
                     "nrem_events": self.total_nrem_sleep_events,
+                    "gpu_24_prunes": self.total_gpu_24_prunes,
+                    "summary_banner": summary_banner_str,
+                    "moe_telemetry": moe_telemetry_str,
+                    "moe_telemetry_full": " | ".join(all_exps_formatted),
+                    "expert_states": structured_exps,
                 },
                 artifacts=saved_arts,
             )

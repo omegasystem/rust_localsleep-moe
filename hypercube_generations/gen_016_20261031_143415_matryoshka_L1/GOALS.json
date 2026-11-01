@@ -1,0 +1,41 @@
+{
+  "cube_id": "gen_016_20261031_143415_matryoshka_L1",
+  "parent_cube_id": "gen_010_20261031_140905_matryoshka_L1",
+  "generation": 16,
+  "created_at": "2026-10-31T14:34:15",
+  "goals": [
+    {
+      "id": "STEER_1",
+      "title": "[主人 Steer 插話指令] what if we use 16 Lora instead 8 with auto Top-K?",
+      "module": "evolved_router_plugin.py & evolved_subagent_core.py",
+      "status": "IN_PROGRESS",
+      "priority": "CRITICAL_USER_STEER",
+      "description": "what if we use 16 Lora instead 8 with auto Top-K?"
+    },
+    {
+      "id": "G1",
+      "title": "唯讀吸收母體架構與 2:4 穩態剪枝拓撲",
+      "module": "src/downscaler.rs & csrc/sparse_expert_gather.cu",
+      "status": "COMPLETED",
+      "priority": "HIGH",
+      "description": "解析母體 FatigueMoERouter 與 2:4 SHY 指數收縮公式，找出可自適應調節學習率/衰減率之改良空間。"
+    },
+    {
+      "id": "G2",
+      "title": "演化子代動態自我調節突觸模組 (Self-Adaptive Homeostasis)",
+      "module": "evolved_homeostasis.py",
+      "status": "COMPLETED",
+      "priority": "HIGH",
+      "description": "在子代專案中生成可根據 Shannon Entropy 波動率動態微調 SHY lambda 與專家喚醒閾值的強化模組。"
+    },
+    {
+      "id": "G3",
+      "title": "執行子代自動化收斂與正交性驗證閘門 (Verification Gate)",
+      "module": "tests/verify_offspring_cube.py",
+      "status": "COMPLETED",
+      "priority": "CRITICAL",
+      "description": "在子代沙盒內獨立執行數值與語法測試，確保無 NaN/Underflow 且正交分數優於或等於母體，方可標記為 READY_FOR_SWAP。"
+    }
+  ],
+  "updated_at": "2026-10-31T14:35:16"
+}

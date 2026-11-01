@@ -191,11 +191,15 @@ __global__ void fisher_downscaler_24_kernel(
     w[idx[1]] = 0.0f;
 
     // Apply SHY homeostatic exponential downscaling to the 2 surviving synapses
+    // Clamp denominator and enforce a biological survival floor >= 0.985 per sleep cycle
+    // (mirrors apply_pytorch_24_fisher_pruning so synapses never underflow to 0.0!)
     #pragma unroll
     for (int k = 2; k < 4; ++k) {
         int s_idx = idx[k];
         if (w[s_idx] != 0.0f) {
-            float decay = expf(-shy_lambda / (sqrt_f[s_idx] + 1e-5f));
+            float decay = expf(-shy_lambda / (sqrt_f[s_idx] + 1e-3f));
+            if (decay < 0.985f) decay = 0.985f;
+            if (decay > 1.0f) decay = 1.0f;
             w[s_idx] *= decay;
         }
     }

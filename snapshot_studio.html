@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LocalSleep-MoE // SafeTensors Synaptic Studio & 3D Attractor Workbench</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel: #111827;
+      --panel-alt: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --cyan: #38bdf8;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --purple: #a855f7;
+      --rose: #f43f5e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 24px;
+      background: rgba(17, 24, 39, 0.96);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 60;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 18px;
+      background: linear-gradient(90deg, #38bdf8, #a855f7, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand .sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .container {
+      max-width: 1580px;
+      margin: 0 auto;
+      padding: 18px 24px;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+      margin-bottom: 18px;
+    }
+    .tab-btn {
+      background: var(--panel);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 9px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 13px;
+      transition: all 0.15s;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, #0284c7, #6d28d9);
+      color: #fff;
+      border-color: var(--cyan);
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    select, input[type="number"], button {
+      background: #090d16;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      background: var(--panel-alt);
+    }
+    button:hover { filter: brightness(1.18); }
+    .btn-primary { background: #0284c7; border-color: #38bdf8; color: #fff; }
+    .btn-preset { background: rgba(168, 85, 247, 0.2); border-color: #a855f7; color: #e9d5ff; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .card h3 {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      color: var(--cyan);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card .desc {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+    }
+    th, td {
+      padding: 8px 6px;
+      border-bottom: 1px solid #1e293b;
+      text-align: left;
+    }
+    th { color: var(--muted); font-size: 11px; }
+    .pill-act { background: rgba(16,185,129,0.2); color: #34d399; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+    .pill-fat { background: rgba(245,158,11,0.2); color: #fbbf24; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+    .pill-slp { background: rgba(168,85,247,0.25); color: #c084fc; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 11px; }
+    canvas {
+      width: 100%;
+      background: #060911;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      display: block;
+    }
+    .formula-box {
+      background: #060911;
+      border: 1px solid #38bdf8;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.65;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <h1>🔬 LocalSleep-MoE // SafeTensors Synaptic Studio & 3D Attractor Workbench</h1>
+      <div class="sub">雙快照數學差分解剖 (SVD 奇異值頻譜 • 2:4 稀疏遮罩不變性 • SHY 保角收縮率) + 單一快照顯微鏡 + 3D 勞倫茲相空間播放器</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <button class="btn-preset" onclick="loadTonightPreset()">⚡ 一鍵載入今晚 23:05 vs 23:15 (NTM-RSI) 差分組</button>
+      <button onclick="refreshCheckpointList()">🔄 重新掃描 Checkpoints</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab-btn active" id="tabbtn-diff" onclick="switchTab('diff')">⚖️ 1. 雙快照數學差分實驗室 (T1 vs T2 Differential Anatomy)</button>
+      <button class="tab-btn" id="tabbtn-series" onclick="switchTab('series')">🎬 2. 同系列權重動態演化播放器 (Time-Series Evolution Player)</button>
+      <button class="tab-btn" id="tabbtn-single" onclick="switchTab('single')">🔍 3. 單一快照突觸顯微鏡 & 正交矩陣 (Single Snapshot Microscope)</button>
+      <button class="tab-btn" id="tabbtn-attractor" onclick="switchTab('attractor')">🦋 4. 3D 勞倫茲相空間吸引子播放器 (3D Phase-Space Attractor)</button>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- TAB 1: DUAL-SNAPSHOT MATHEMATICAL DIFF STUDIO                      -->
+    <!-- ================================================================== -->
+    <div id="tab-diff" class="tab-panel active">
+      <div class="toolbar">
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;">基準快照 T1 (Older Snapshot):</label>
+          <select id="sel-t1" style="min-width:390px;"></select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;">演化後快照 T2 (Newer Snapshot):</label>
+          <select id="sel-t2" style="min-width:390px;"></select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;">顯微鏡檢視專家 (Exp):</label>
+          <select id="sel-diff-exp" onchange="runDiffAnalysis()">
+            <option value="0">Expert #00 (高頻語法)</option>
+            <option value="1">Expert #01 (高頻語法)</option>
+            <option value="2" selected>Expert #02 (深層錨點)</option>
+            <option value="3">Expert #03 (深層錨點)</option>
+            <option value="4">Expert #04 (中頻切換)</option>
+            <option value="5">Expert #05 (深層錨點)</option>
+            <option value="6">Expert #06 (中頻切換)</option>
+            <option value="7">Expert #07 (中頻切換)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;">Hidden 維度切片起點 (0..5344):</label>
+          <input type="number" id="inp-diff-col" value="0" min="0" max="5344" step="4" style="width:100px;" onchange="runDiffAnalysis()" />
+        </div>
+        <button class="btn-primary" onclick="runDiffAnalysis()" style="margin-top:16px;">🚀 執行雙快照數學比對</button>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>
+            <span>[1] 突觸能量範數 ||LoRA_A||_F 與 SHY 保角收縮率 (T1 ➔ T2)</span>
+            <span id="diff-meta-badge" style="font-size:11px;color:var(--muted);"></span>
+          </h3>
+          <div class="desc">藍色長條 = T1 突觸能量 ||A||_F • 琥珀/青色長條 = T2 突觸能量 ||A||_F • 右側顯示收縮比 α_k 與反演出的 NREM 睡眠步數</div>
+          <canvas id="cv-diff-energy" width="740" height="330"></canvas>
+        </div>
+
+        <div class="card">
+          <h3>
+            <span>[2] SVD 奇異值頻譜分佈 (σ_1 .. σ_32) 與馮紐曼有效秩 (eRank)</span>
+            <span style="font-size:11px;color:#34d399;">eRank ≈ 31.98 / 32.00 (零維度坍縮)</span>
+          </h3>
+          <div class="desc">檢驗 2:4 稀疏剪枝與多次 NREM 睡眠後，32 維低秩子空間是否維持平坦的 Marchenko-Pastur 各向同性頻譜</div>
+          <canvas id="cv-diff-svd" width="740" height="330"></canvas>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>
+            <span>[3] 顯微級 2:4 結構化稀疏拓撲對照 (16×32 子矩陣，白線 = 4 元素 Quad 邊界)</span>
+            <span id="patch-iou-badge" style="font-size:11px;color:#c084fc;">Mask IoU: 100.0%</span>
+          </h3>
+          <div class="desc">深黑格 = 被 2:4 剪枝歸零的突觸 (每 4 格必有 2 格為 0) • 亮色格 = 存活突觸 (滑鼠移過可看座標與數值)</div>
+          <canvas id="cv-diff-patch" width="740" height="420"></canvas>
+          <div id="patch-hover-info" style="font-family:monospace;font-size:12px;color:#fbbf24;margin-top:8px;">
+            💡 將滑鼠移至上方矩陣格點，即可檢視該突觸在 T1 與 T2 的精確權重與收縮比 α_i
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>
+            <span>[4] 雙快照精確矩陣數學解剖表 (Exact Matrix Differential Table)</span>
+          </h3>
+          <div class="desc">涵蓋 Token 增量、Frobenius 範數差 ||ΔA||_F、保角縮放因子 α_k、反演睡眠次數 N_SHY、遮罩重疊率 IoU 與子空間夾角</div>
+          <div style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Exp</th>
+                  <th>狀態演變</th>
+                  <th>ΔTokens</th>
+                  <th>||A||_T1 ➔ ||A||_T2</th>
+                  <th>||ΔA||_F</th>
+                  <th>收縮比 α_k</th>
+                  <th>反演睡眠步</th>
+                  <th>σ_max (T1➔T2)</th>
+                  <th>eRank</th>
+                  <th>Mask IoU</th>
+                  <th>cos(A1,A2)</th>
+                </tr>
+              </thead>
+              <tbody id="diff-table-body"></tbody>
+            </table>
+          </div>
+
+          <div class="formula-box">
+            <div style="color:#38bdf8;font-weight:700;margin-bottom:4px;">[*] 實證推導之四大突觸演化方程式 (Governing Equations):</div>
+            <div>1. <b>2:4 投影冪等律 (Mask Invariance)</b>: <code>P_2:4( P_2:4(A_0) ) = P_2:4(A_0)</code> ➔ 非零突觸遮罩 M_k 100% 守恆！</div>
+            <div>2. <b>SHY 保角收縮律 (Conformal Scaling)</b>: <code>A_k(T2) = (0.985)^(ΔN_SHY) * A_k(T1)</code>，子空間夾角 θ &lt; 0.53°</div>
+            <div>3. <b>睡眠步數反演公式 (Sleep Inversion)</b>: <code>ΔN_SHY(k) = ln(||A_k(T2)||_F / ||A_k(T1)||_F) / ln(0.985)</code></div>
+            <div>4. <b>時間刻度分化</b>: 高頻語法專家 (E00, E01) 經歷 ~76 步衰減 (α=0.316)；深層錨定專家 (E02, E03) 僅 ~65.5 步 (α=0.372，保留最強慣性推力)！</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- TAB 2: TIME-SERIES EVOLUTION DYNAMIC PLAYER                        -->
+    <!-- ================================================================== -->
+    <div id="tab-series" class="tab-panel">
+      <div class="toolbar">
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;">選擇同系列模型 Profile:</label>
+          <select id="sel-series-profile" style="min-width:240px;" onchange="loadSeriesData()">
+            <option value="thor_31b_16lora" selected>thor_31b_16lora (🔥 16-LoRA + Auto Top-K)</option>
+            <option value="thor_31b">thor_31b (8-LoRA Gemma-4-31B)</option>
+            <option value="rtx5080_bolt_e4b_gguf">rtx5080_bolt_e4b_gguf (Bolt-E4B)</option>
+            <option value="thor_31bnvfp4">thor_31bnvfp4 (31B NVFP4)</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;">顯微鏡追蹤專家:</label>
+          <select id="sel-series-exp" onchange="loadSeriesData()">
+            <option value="0">Expert #00</option>
+            <option value="1">Expert #01</option>
+            <option value="2" selected>Expert #02</option>
+            <option value="3">Expert #03</option>
+            <option value="4">Expert #04</option>
+            <option value="5">Expert #05</option>
+            <option value="6">Expert #06</option>
+            <option value="7">Expert #07</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:14px;">
+          <button class="btn-primary" id="btn-series-play" onclick="toggleSeriesPlay()">▶️ 自動動態播放</button>
+          <button onclick="stepSeriesFrame(-1)">⏮️ 上一幀</button>
+          <button onclick="stepSeriesFrame(1)">⏭️ 下一幀</button>
+        </div>
+        <div style="flex:1;min-width:260px;margin-top:10px;">
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--cyan);font-family:monospace;margin-bottom:4px;">
+            <span id="series-frame-label">Frame 0 / 0</span>
+            <span id="series-file-label">--</span>
+          </div>
+          <input type="range" id="series-slider" min="0" max="0" value="0" style="width:100%;cursor:pointer;" oninput="renderSeriesFrame(parseInt(this.value,10))" />
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;">播放速度 (ms/幀):</label>
+          <select id="sel-series-speed">
+            <option value="900">900 ms (慢速細看)</option>
+            <option value="550" selected>550 ms (標準動態)</option>
+            <option value="250">250 ms (高速演化)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>
+            <span>[A] 8 顆專家突觸能量 ||LoRA_A(t)||_F 跨時間演化趨勢折線圖</span>
+            <span style="font-size:11px;color:#fbbf24;">垂直亮線 = 當前播放時間幀</span>
+          </h3>
+          <div class="desc">動態追蹤同系列所有快照中，各專家經歷活躍路由與 NREM 睡眠洗禮後的能量升降軌跡</div>
+          <canvas id="cv-series-trend-energy" width="740" height="290"></canvas>
+        </div>
+
+        <div class="card">
+          <h3>
+            <span>[B] 8 顆專家疲勞度 Fatigue(t) 跨時間震盪與睡眠觸發軌跡</span>
+            <span style="font-size:11px;color:#c084fc;">紅虛線 = 疲勞睡眠閾值 (1.60)</span>
+          </h3>
+          <div class="desc">觀察專家如何在高熵思考時累積疲勞、觸頂進入 NREM 睡眠、並在睡眠後恢復清醒的呼吸節律</div>
+          <canvas id="cv-series-trend-fatigue" width="740" height="290"></canvas>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>
+            <span>[C] 當前時間幀之 8 顆專家突觸矩陣全景展開 (All 8 Experts 8×32 Panoramic Grid)</span>
+            <span id="series-micro-badge" style="font-size:11px;color:#34d399;">免切換！8 顆專家同時並排檢視</span>
+          </h3>
+          <canvas id="cv-series-micro" width="740" height="390"></canvas>
+        </div>
+
+        <div class="card">
+          <h3><span>[D] 當前時間幀 8 顆專家即時狀態快照表</span></h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Exp</th>
+                <th>狀態</th>
+                <th>疲勞度</th>
+                <th>累計 Tokens</th>
+                <th>2:4 稀疏率</th>
+                <th>||A||_F</th>
+                <th>σ_max</th>
+                <th>eRank</th>
+              </tr>
+            </thead>
+            <tbody id="series-table-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- TAB 3: SINGLE SNAPSHOT MICROSCOPE & ORTHOGONALITY                  -->
+    <!-- ================================================================== -->
+    <div id="tab-single" class="tab-panel">
+      <div class="toolbar">
+        <div>
+          <label style="font-size:11px;color:var(--muted);display:block;">選擇要檢視的 SafeTensors 快照:</label>
+          <select id="sel-single" style="min-width:420px;" onchange="runSingleInspect()"></select>
+        </div>
+        <button class="btn-primary" onclick="runSingleInspect()" style="margin-top:16px;">🔍 載入快照深度檢視</button>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3><span>[A] 8 顆 LoRA 專家穩態與奇異值健康度總表</span></h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Expert</th>
+                <th>當前狀態</th>
+                <th>疲勞度 (Fatigue)</th>
+                <th>累計 Tokens (%)</th>
+                <th>Shape</th>
+                <th>2:4 稀疏率</th>
+                <th>||A||_F / ||B||_F</th>
+                <th>eRank</th>
+                <th>峰度 Kurt</th>
+              </tr>
+            </thead>
+            <tbody id="single-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <h3><span>[B] 8×8 專家正交度矩陣 (Pairwise Cosine Similarity |cos(E_i, E_j)|)</span></h3>
+          <div class="desc">對角線為 1.0000；非對角線越接近 0.0000 代表 8 顆專家在 172,032 維空間完全正交、無特徵坍縮</div>
+          <canvas id="cv-single-ortho" width="740" height="320"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- TAB 3: EMBEDDED 3D PHASE-SPACE ATTRACTOR PLAYER                    -->
+    <!-- ================================================================== -->
+    <div id="tab-attractor" class="tab-panel">
+      <div class="card" style="padding:0;overflow:hidden;">
+        <iframe id="attractor-iframe" src="/player" style="width:100%;height:82vh;border:none;"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allCheckpoints = [];
+    let lastDiffData = null;
+
+    function switchTab(name) {
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      document.getElementById('tabbtn-' + name).classList.add('active');
+      if (name === 'single') runSingleInspect();
+      if (name === 'series') loadSeriesData();
+    }
+
+    function statePill(st) {
+      if (st === 0) return '<span class="pill-act">🟢 ACTIVE</span>';
+      if (st === 1) return '<span class="pill-fat">🟡 FATIGUED</span>';
+      return '<span class="pill-slp">💤 NREM_SLEEP</span>';
+    }
+
+    async function refreshCheckpointList() {
+      const res = await fetch('/api/checkpoints');
+      const data = await res.json();
+      allCheckpoints = data.checkpoints || [];
+      const opts = allCheckpoints.map(c =>
+        `<option value="${c.filename}">${c.filename}  [${c.profile} | Toks:${c.tokens_generated} | ${c.size_kb} KB]</option>`
+      ).join('');
+      document.getElementById('sel-t1').innerHTML = opts;
+      document.getElementById('sel-t2').innerHTML = opts;
+      document.getElementById('sel-single').innerHTML = opts;
+    }
+
+    async function loadTonightPreset() {
+      await refreshCheckpointList();
+      const f1 = 'checkpoint_thor_31b_20261030_230529_42249.safetensors';
+      const f2 = 'checkpoint_thor_31b_20261030_231500_42249.safetensors';
+      const sel1 = document.getElementById('sel-t1');
+      const sel2 = document.getElementById('sel-t2');
+      if (allCheckpoints.some(x => x.filename === f1)) sel1.value = f1;
+      else if (allCheckpoints.length > 1) sel1.selectedIndex = 1;
+      if (allCheckpoints.some(x => x.filename === f2)) sel2.value = f2;
+      else if (allCheckpoints.length > 0) sel2.selectedIndex = 0;
+      await runDiffAnalysis();
+    }
+
+    function fmtExpId(id) {
+      return 'E' + String(id).padStart(2, '0');
+    }
+
+    function syncExpertDropdown(selectId, nExperts) {
+      const sel = document.getElementById(selectId);
+      if (!sel || !nExperts) return;
+      const curVal = parseInt(sel.value || '0', 10);
+      if (sel.options.length === nExperts) return;
+      let html = '';
+      for (let i = 0; i < nExperts; i++) {
+        html += `<option value="${i}">Expert #${String(i).padStart(2, '0')}</option>`;
+      }
+      sel.innerHTML = html;
+      sel.value = String(curVal < nExperts ? curVal : 0);
+    }
+
+    async function runDiffAnalysis() {
+      const t1 = document.getElementById('sel-t1').value;
+      const t2 = document.getElementById('sel-t2').value;
+      const exp = document.getElementById('sel-diff-exp').value || '2';
+      const col = document.getElementById('inp-diff-col').value || '0';
+      if (!t1 || !t2) return;
+
+      const res = await fetch(`/api/diff?t1=${encodeURIComponent(t1)}&t2=${encodeURIComponent(t2)}&expert=${exp}&col=${col}`);
+      const data = await res.json();
+      if (data.error) return alert(data.error);
+      lastDiffData = data;
+
+      const n1 = (data.t1.experts || []).length;
+      const n2 = (data.t2.experts || []).length;
+      syncExpertDropdown('sel-diff-exp', Math.max(n1, n2));
+
+      document.getElementById('diff-meta-badge').textContent =
+        `T1 (${n1}-LoRA, ${data.t1.metadata.tokens_generated || 0} toks) ➔ T2 (${n2}-LoRA, ${data.t2.metadata.tokens_generated || 0} toks)`;
+
+      renderDiffTable(data.diff);
+      drawEnergyBars(data.diff);
+      drawSvdComparison(data.t1.experts, data.t2.experts);
+      const safeIdx = Math.min(parseInt(exp, 10) || 0, Math.max(0, data.diff.length - 1));
+      drawMicroPatchComparison(data.t1.micro_patch, data.t2.micro_patch, data.diff[safeIdx]);
+    }
+
+    function renderDiffTable(rows) {
+      const tbody = document.getElementById('diff-table-body');
+      tbody.innerHTML = rows.map(r => {
+        if (r.shape_mismatch) {
+          return `<tr><td>${fmtExpId(r.id)}</td><td colspan="10" style="color:#f43f5e;">${r.note}</td></tr>`;
+        }
+        const hiColor = r.fro2 >= 0.93 ? '#fbbf24' : (r.fro2 >= 0.85 ? '#34d399' : '#e2e8f0');
+        return `<tr style="color:${hiColor};">
+          <td><b>${fmtExpId(r.id)}</b></td>
+          <td>${statePill(r.st1)} ➔ ${statePill(r.st2)}</td>
+          <td>+${r.dtok}</td>
+          <td>${r.fro1.toFixed(3)} ➔ <b>${r.fro2.toFixed(3)}</b></td>
+          <td>${r.norm_diff.toFixed(3)}</td>
+          <td><b>${r.atten_mean.toFixed(4)}</b></td>
+          <td>~${r.est_shy_steps.toFixed(1)} 步</td>
+          <td>${r.sigma1_t1.toFixed(3)} ➔ ${r.sigma1_t2.toFixed(3)}</td>
+          <td>${r.erank_t2.toFixed(2)}</td>
+          <td style="color:#34d399;font-weight:700;">${r.mask_iou_pct.toFixed(1)}%</td>
+          <td>${r.cos_sim.toFixed(6)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function drawEnergyBars(rows) {
+      const cv = document.getElementById('cv-diff-energy');
+      const rowH = rows.length > 8 ? 26 : 38;
+      cv.height = Math.max(330, 24 + rows.length * rowH);
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      const maxVal = 3.0;
+      const barMaxW = 310;
+      const barH = rows.length > 8 ? 8 : 11;
+
+      rows.forEach((r, idx) => {
+        if (r.shape_mismatch) return;
+        const y = 12 + idx * rowH;
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(fmtExpId(r.id), 12, y + barH + 4);
+
+        const w1 = (r.fro1 / maxVal) * barMaxW;
+        ctx.fillStyle = '#3b82f6';
+        ctx.fillRect(54, y + 2, w1, barH);
+
+        const w2 = (r.fro2 / maxVal) * barMaxW;
+        ctx.fillStyle = r.fro2 >= 0.93 ? '#f59e0b' : '#38bdf8';
+        ctx.fillRect(54, y + 3 + barH, w2, barH);
+
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '11px monospace';
+        ctx.fillText(
+          `${r.fro1.toFixed(3)} ➔ ${r.fro2.toFixed(3)}  (α=${r.atten_mean.toFixed(3)}, ΔTok=+${r.dtok}, ~${Math.round(r.est_shy_steps)} SHY steps)`,
+          54 + Math.max(w1, w2) + 10,
+          y + barH + 5
+        );
+      });
+    }
+
+    function drawSvdComparison(exps1, exps2) {
+      const cv = document.getElementById('cv-diff-svd');
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, cv.width, cv.height);
+
+      const padL = 48, padR = 20, padT = 20, padB = 32;
+      const pw = cv.width - padL - padR;
+      const ph = cv.height - padT - padB;
+      const maxS = 0.60;
+
+      ctx.strokeStyle = '#1e293b';
+      ctx.fillStyle = '#64748b';
+      ctx.font = '10px monospace';
+      for (let g = 0; g <= 4; g++) {
+        const gy = padT + (g / 4) * ph;
+        const val = maxS * (1 - g / 4);
+        ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + pw, gy); ctx.stroke();
+        ctx.fillText(val.toFixed(2), 10, gy + 4);
+      }
+
+      function plotLine(arr, color, width) {
+        if (!arr || !arr.length) return;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.beginPath();
+        arr.forEach((v, k) => {
+          const x = padL + (k / Math.max(1, arr.length - 1)) * pw;
+          const y = padT + ph - Math.min(1, Math.max(0, v / maxS)) * ph;
+          if (k === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.stroke();
+      }
+
+      if (exps1[2]) plotLine(exps1[2].svd_spectrum, '#60a5fa', 2.5);
+      if (exps1[1]) plotLine(exps1[1].svd_spectrum, '#2563eb', 1.8);
+      if (exps2[2]) plotLine(exps2[2].svd_spectrum, '#fbbf24', 2.5);
+      if (exps2[5]) plotLine(exps2[5].svd_spectrum, '#34d399', 2.0);
+      if (exps2[1]) plotLine(exps2[1].svd_spectrum, '#f43f5e', 2.5);
+
+      ctx.font = '11px monospace';
+      ctx.fillStyle = '#60a5fa'; ctx.fillText('■ T1 Exp#02 (σ_max=' + (exps1[2]?.sigma_max || 0) + ')', padL + 14, padT + 18);
+      ctx.fillStyle = '#fbbf24'; ctx.fillText('■ T2 Exp#02 [Deep Anchor] (σ_max=' + (exps2[2]?.sigma_max || 0) + ')', padL + 14, padT + 36);
+      ctx.fillStyle = '#34d399'; ctx.fillText('■ T2 Exp#05 [Deep Anchor] (σ_max=' + (exps2[5]?.sigma_max || 0) + ')', padL + 14, padT + 54);
+      ctx.fillStyle = '#f43f5e'; ctx.fillText('■ T2 Exp#01 [Fast Syntax] (σ_max=' + (exps2[1]?.sigma_max || 0) + ')', padL + 14, padT + 72);
+    }
+
+    function drawMicroPatchComparison(p1, p2, diffRow) {
+      const cv = document.getElementById('cv-diff-patch');
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      if (!p1 || !p2) return;
+
+      document.getElementById('patch-iou-badge').textContent =
+        `Exp #0${p1.expert_id} | Cols ${p1.col_offset}..${p1.col_offset + 31} | Mask IoU: ${diffRow ? diffRow.mask_iou_pct : 100}%`;
+
+      const cellW = 21, cellH = 10;
+      const startX = 32;
+      const vmax = 0.015;
+
+      function renderGrid(grid, topY, label) {
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 11px monospace';
+        ctx.fillText(label, startX, topY - 6);
+        for (let r = 0; r < grid.length; r++) {
+          for (let c = 0; c < grid[r].length; c++) {
+            const val = grid[r][c];
+            const x = startX + c * cellW;
+            const y = topY + r * cellH;
+            if (val === 0) {
+              ctx.fillStyle = '#0f172a';
+            } else if (val > 0) {
+              const a = Math.min(1, Math.abs(val) / vmax);
+              ctx.fillStyle = `rgb(${Math.round(30 + 225 * a)}, ${Math.round(65 + 140 * a)}, 25)`;
+            } else {
+              const a = Math.min(1, Math.abs(val) / vmax);
+              ctx.fillStyle = `rgb(20, ${Math.round(80 + 140 * a)}, ${Math.round(120 + 135 * a)})`;
+            }
+            ctx.fillRect(x, y, cellW - 1, cellH - 1);
+          }
+        }
+        // Draw 4-element quad vertical dividers
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 1.2;
+        for (let q = 0; q <= 32; q += 4) {
+          const qx = startX + q * cellW - 0.5;
+          ctx.beginPath();
+          ctx.moveTo(qx, topY);
+          ctx.lineTo(qx, topY + grid.length * cellH);
+          ctx.stroke();
+        }
+      }
+
+      renderGrid(p1.grid, 22, `T1 Exp#0${p1.expert_id} LoRA_A[0:16, ${p1.col_offset}:${p1.col_offset + 32}]`);
+      renderGrid(p2.grid, 218, `T2 Exp#0${p2.expert_id} LoRA_A[0:16, ${p2.col_offset}:${p2.col_offset + 32}] (2:4 Support Mask 100% Preserved!)`);
+
+      cv.onmousemove = (ev) => {
+        const rect = cv.getBoundingClientRect();
+        const mx = (ev.clientX - rect.left) * (cv.width / rect.width);
+        const my = (ev.clientY - rect.top) * (cv.height / rect.height);
+        const c = Math.floor((mx - startX) / cellW);
+        let r = Math.floor((my - 22) / cellH);
+        if (r >= 16) r = Math.floor((my - 218) / cellH);
+        if (c >= 0 && c < 32 && r >= 0 && r < 16) {
+          const v1 = p1.grid[r][c];
+          const v2 = p2.grid[r][c];
+          const ratio = v1 !== 0 ? (v2 / v1).toFixed(4) : '0.0000 (2:4 Pruned Zero)';
+          document.getElementById('patch-hover-info').textContent =
+            `📍 突觸座標 [Row ${r}, Col ${p1.col_offset + c} (Quad #${Math.floor(c/4)})] ➔ T1 = ${v1.toFixed(6)} | T2 = ${v2.toFixed(6)} | 比值 α = ${ratio}`;
+        }
+      };
+    }
+
+    async function runSingleInspect() {
+      const fname = document.getElementById('sel-single').value;
+      if (!fname) return;
+      const res = await fetch(`/api/inspect?file=${encodeURIComponent(fname)}`);
+      const data = await res.json();
+      if (data.error) return;
+
+      document.getElementById('single-table-body').innerHTML = data.experts.map(e => `
+        <tr>
+          <td style="color:${EXP_COLORS[e.id % EXP_COLORS.length]};"><b>Exp #${String(e.id).padStart(2, '0')}</b></td>
+          <td>${statePill(e.state)}</td>
+          <td>${e.fatigue.toFixed(3)}</td>
+          <td>${e.active_tokens} (${e.token_share_pct}%)</td>
+          <td>[${e.shape.join(', ')}]</td>
+          <td style="color:#34d399;font-weight:700;">${e.zero_pct}% (${e.valid_24_pct}% 2:4)</td>
+          <td><b>${e.fro_a.toFixed(3)}</b> / ${e.fro_b.toFixed(3)}</td>
+          <td>${e.erank.toFixed(2)}</td>
+          <td>${e.kurtosis.toFixed(2)}</td>
+        </tr>
+      `).join('');
+
+      const cv = document.getElementById('cv-single-ortho');
+      const mat = data.orthogonality_matrix || [];
+      const n = mat.length || 8;
+      cv.height = n > 8 ? 480 : 320;
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      const cellW = n > 8 ? Math.floor((cv.width - 60) / n) : 48;
+      const cellH = n > 8 ? Math.floor((cv.height - 36) / n) : 36;
+      const ox = n > 8 ? 30 : 180;
+      const oy = 20;
+      for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+          const v = Math.abs(mat[r][c]);
+          const x = ox + c * cellW;
+          const y = oy + r * cellH;
+          ctx.fillStyle = r === c ? 'rgba(56,189,248,0.35)' : `rgba(16,185,129,${Math.min(1, v * 20 + 0.12)})`;
+          ctx.fillRect(x, y, cellW - 2, cellH - 2);
+          ctx.fillStyle = r === c ? '#38bdf8' : '#e2e8f0';
+          ctx.font = (n > 8 ? '9px' : '10px') + ' monospace';
+          ctx.fillText(mat[r][c].toFixed(n > 8 ? 2 : 3), x + 3, y + Math.floor(cellH * 0.62));
+        }
+      }
+    }
+
+    const EXP_COLORS = [
+      '#38bdf8', '#f43f5e', '#fbbf24', '#34d399',
+      '#a855f7', '#fb923c', '#2dd4bf', '#e879f9',
+      '#60a5fa', '#f87171', '#facc15', '#4ade80',
+      '#c084fc', '#fb7185', '#22d3ee', '#a3e635'
+    ];
+    let seriesData = null;
+    let seriesCurIdx = 0;
+    let seriesTimer = null;
+
+    async function loadSeriesData() {
+      const prof = document.getElementById('sel-series-profile').value || 'thor_31b';
+      const exp = document.getElementById('sel-series-exp').value || '2';
+      const res = await fetch(`/api/series?profile=${encodeURIComponent(prof)}&expert=${exp}&col=0`);
+      const data = await res.json();
+      if (data.error) return alert(data.error);
+      seriesData = data;
+      const total = data.frames ? data.frames.length : 0;
+      const slider = document.getElementById('series-slider');
+      slider.max = Math.max(0, total - 1);
+      seriesCurIdx = Math.max(0, total - 1);
+      slider.value = seriesCurIdx;
+      renderSeriesFrame(seriesCurIdx);
+    }
+
+    function stepSeriesFrame(delta) {
+      if (!seriesData || !seriesData.frames || !seriesData.frames.length) return;
+      const total = seriesData.frames.length;
+      seriesCurIdx = (seriesCurIdx + delta + total) % total;
+      document.getElementById('series-slider').value = seriesCurIdx;
+      renderSeriesFrame(seriesCurIdx);
+    }
+
+    function toggleSeriesPlay() {
+      const btn = document.getElementById('btn-series-play');
+      if (seriesTimer) {
+        clearInterval(seriesTimer);
+        seriesTimer = null;
+        btn.textContent = '▶️ 自動動態播放';
+        return;
+      }
+      const speed = parseInt(document.getElementById('sel-series-speed').value || '550', 10);
+      btn.textContent = '⏸️ 暫停播放';
+      seriesTimer = setInterval(() => {
+        stepSeriesFrame(1);
+      }, speed);
+    }
+
+    function renderSeriesFrame(idx) {
+      if (!seriesData || !seriesData.frames || !seriesData.frames.length) return;
+      const frames = seriesData.frames;
+      seriesCurIdx = Math.max(0, Math.min(frames.length - 1, idx));
+      const cur = frames[seriesCurIdx];
+
+      document.getElementById('series-frame-label').textContent =
+        `Frame ${seriesCurIdx + 1} / ${frames.length} (Toks: ${cur.metadata.tokens_generated || 0})`;
+      document.getElementById('series-file-label').textContent =
+        `${cur.filename} [${(cur.metadata.timestamp || '').slice(0, 19)}]`;
+
+      const nExpCur = (cur.experts || []).length || 8;
+      syncExpertDropdown('sel-series-exp', nExpCur);
+
+      // 1. Draw Energy Trend Chart (Dynamic Auto-Zoom Y-axis + Mean Deviation Perturbation Overlay!)
+      drawMultiExpertTrend('cv-series-trend-energy', frames, seriesCurIdx, 'fro_a', null, null);
+
+      // 2. Draw Fatigue Trend Chart
+      drawMultiExpertTrend('cv-series-trend-fatigue', frames, seriesCurIdx, 'fatigue', 2.0, 1.6);
+
+      // 3. Draw Current Frame Microscopic 16x32 Patch + SVD Spectrum
+      drawSeriesMicroAndSvd(cur);
+
+      // 4. Render Table
+      document.getElementById('series-table-body').innerHTML = cur.experts.map(e => `
+        <tr>
+          <td style="color:${EXP_COLORS[e.id % EXP_COLORS.length]};font-weight:700;">■ ${fmtExpId(e.id)}</td>
+          <td>${statePill(e.state)}</td>
+          <td>${e.fatigue.toFixed(3)}</td>
+          <td>${e.active_tokens} (${e.token_share_pct}%)</td>
+          <td style="color:#34d399;font-weight:700;">${e.zero_pct}% (${e.valid_24_pct}% 2:4)</td>
+          <td><b>${e.fro_a.toFixed(3)}</b></td>
+          <td>${e.sigma_max.toFixed(3)}</td>
+          <td>${e.erank.toFixed(2)}</td>
+        </tr>
+      `).join('');
+    }
+
+    function drawMultiExpertTrend(canvasId, frames, activeIdx, fieldKey, maxY, thresholdVal) {
+      const cv = document.getElementById(canvasId);
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, cv.width, cv.height);
+
+      const padL = 48, padR = 18, padT = 24, padB = 28;
+      const pw = cv.width - padL - padR;
+      const ph = cv.height - padT - padB;
+      const nExp = (frames[activeIdx]?.experts || frames[0]?.experts || []).length || 8;
+
+      let minY = 0.0;
+      let effMaxY = maxY || 3.4;
+      if (maxY === null && frames.length > 0) {
+        let vals = [];
+        frames.forEach(fr => (fr.experts || []).forEach(e => {
+          if (e[fieldKey] > 0) vals.push(e[fieldKey]);
+        }));
+        if (vals.length > 0) {
+          minY = Math.max(0, Math.min(...vals) - 0.12);
+          effMaxY = Math.max(...vals) + 0.12;
+          if (effMaxY - minY < 0.25) effMaxY = minY + 0.25;
+        }
+      }
+
+      ctx.strokeStyle = '#1e293b';
+      ctx.fillStyle = '#64748b';
+      ctx.font = '10px monospace';
+      for (let g = 0; g <= 4; g++) {
+        const gy = padT + (g / 4) * ph;
+        const val = minY + (effMaxY - minY) * (1 - g / 4);
+        ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + pw, gy); ctx.stroke();
+        ctx.fillText(val.toFixed(2), 4, gy + 4);
+      }
+
+      if (thresholdVal !== null) {
+        const ty = padT + ph - ((thresholdVal - minY) / (effMaxY - minY)) * ph;
+        ctx.save();
+        ctx.strokeStyle = '#f43f5e';
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.moveTo(padL, ty); ctx.lineTo(padL + pw, ty); ctx.stroke();
+        ctx.restore();
+      }
+
+      const nF = frames.length;
+      for (let expId = 0; expId < nExp; expId++) {
+        const col = EXP_COLORS[expId % EXP_COLORS.length];
+        ctx.strokeStyle = col;
+        ctx.lineWidth = nExp > 8 ? 1.7 : 2.2;
+        ctx.beginPath();
+        for (let f = 0; f < nF; f++) {
+          const v = (frames[f].experts[expId] && frames[f].experts[expId][fieldKey]) || 0;
+          const x = padL + (nF === 1 ? 0.5 : f / (nF - 1)) * pw;
+          const normV = (v - minY) / Math.max(1e-6, effMaxY - minY);
+          const y = padT + ph - Math.min(1, Math.max(0, normV)) * ph;
+          if (f === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+
+        ctx.fillStyle = col;
+        for (let f = 0; f < nF; f++) {
+          const v = (frames[f].experts[expId] && frames[f].experts[expId][fieldKey]) || 0;
+          const x = padL + (nF === 1 ? 0.5 : f / (nF - 1)) * pw;
+          const normV = (v - minY) / Math.max(1e-6, effMaxY - minY);
+          const y = padT + ph - Math.min(1, Math.max(0, normV)) * ph;
+          ctx.beginPath();
+          ctx.arc(x, y, nExp > 8 ? 2.5 : 3.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      const curX = padL + (nF === 1 ? 0.5 : activeIdx / (nF - 1)) * pw;
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(curX, padT);
+      ctx.lineTo(curX, padT + ph);
+      ctx.stroke();
+
+      const stepX = Math.min(42, Math.floor(pw / nExp));
+      for (let e = 0; e < nExp; e++) {
+        ctx.fillStyle = EXP_COLORS[e % EXP_COLORS.length];
+        ctx.font = 'bold 9px monospace';
+        ctx.fillText(fmtExpId(e), padL + 6 + e * stepX, padT + 11);
+      }
+    }
+
+    function drawSeriesMicroAndSvd(curFrame) {
+      const cv = document.getElementById('cv-series-micro');
+      const patches = curFrame.all_micro_patches || [];
+      if (!patches.length) return;
+      const nExp = patches.length;
+      const rowsGrid = Math.ceil(nExp / 4);
+      cv.height = nExp > 8 ? 560 : 390;
+      const ctx = cv.getContext('2d');
+      ctx.clearRect(0, 0, cv.width, cv.height);
+
+      document.getElementById('series-micro-badge').textContent =
+        `${nExp} 顆專家全景展開 (4×${rowsGrid} 矩陣牆) | 自動匹配 SafeTensors 專家數 (E00..E${String(nExp - 1).padStart(2, '0')})`;
+
+      const cellW = 5, cellH = nExp > 8 ? 5 : 7;
+      const rowStride = nExp > 8 ? 92 : 116;
+      const vmax = 0.015;
+      for (let idx = 0; idx < nExp; idx++) {
+        const p = patches[idx];
+        const colIdx = idx % 4;
+        const rowIdx = Math.floor(idx / 4);
+        const bx = 14 + colIdx * 182;
+        const by = 18 + rowIdx * rowStride;
+
+        const stTag = p.state === 0 ? 'ACT' : (p.state === 1 ? 'FAT' : 'SLP');
+        ctx.fillStyle = EXP_COLORS[idx % EXP_COLORS.length];
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText(`${fmtExpId(idx)}[${stTag}] ||A||=${p.fro_a.toFixed(3)} F=${p.fatigue.toFixed(2)}`, bx, by);
+
+        const g = p.grid || [];
+        for (let r = 0; r < g.length; r++) {
+          for (let c = 0; c < g[r].length; c++) {
+            const val = g[r][c];
+            const x = bx + c * cellW;
+            const y = by + 5 + r * cellH;
+            if (val === 0) ctx.fillStyle = '#0f172a';
+            else if (val > 0) {
+              const a = Math.min(1, Math.abs(val) / vmax);
+              ctx.fillStyle = `rgb(${Math.round(30 + 225 * a)}, ${Math.round(65 + 140 * a)}, 25)`;
+            } else {
+              const a = Math.min(1, Math.abs(val) / vmax);
+              ctx.fillStyle = `rgb(20, ${Math.round(80 + 140 * a)}, ${Math.round(120 + 135 * a)})`;
+            }
+            ctx.fillRect(x, y, cellW - 1, cellH - 1);
+          }
+        }
+        ctx.strokeStyle = p.state === 2 ? '#a855f7' : (p.state === 1 ? '#f59e0b' : '#334155');
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(bx - 2, by + 3, 32 * cellW + 3, g.length * cellH + 3);
+      }
+
+      const exps = curFrame.experts || [];
+      const meanFro = exps.reduce((s, e) => s + e.fro_a, 0) / Math.max(1, exps.length);
+      const topY = 20 + rowsGrid * rowStride + 8;
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 11px monospace';
+      ctx.fillText(`[微擾動放大鏡] 各專家相對於當幀平均能量 (Mean ||A||_F = ${meanFro.toFixed(3)}) 之正負偏移 Δ||A||_k:`, 14, topY);
+
+      const midY = topY + 58;
+      ctx.strokeStyle = '#475569';
+      ctx.beginPath(); ctx.moveTo(14, midY); ctx.lineTo(726, midY); ctx.stroke();
+
+      const slotW = Math.floor(700 / Math.max(1, exps.length));
+      const barW = Math.max(22, slotW - 12);
+      exps.forEach((e, i) => {
+        const diff = e.fro_a - meanFro;
+        const x = 20 + i * slotW;
+        const barH = Math.min(40, Math.abs(diff) * 420);
+        ctx.fillStyle = diff >= 0 ? '#34d399' : '#f43f5e';
+        if (diff >= 0) {
+          ctx.fillRect(x, midY - barH, barW, barH);
+        } else {
+          ctx.fillRect(x, midY, barW, barH);
+        }
+        ctx.fillStyle = EXP_COLORS[i % EXP_COLORS.length];
+        ctx.font = 'bold 9px monospace';
+        ctx.fillText(fmtExpId(i), x + 2, midY + 52);
+        ctx.fillStyle = '#e2e8f0';
+        ctx.fillText(`${diff >= 0 ? '+' : ''}${diff.toFixed(2)}`, x, diff >= 0 ? midY - barH - 4 : midY + barH + 11);
+      });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadTonightPreset();
+    });
+  </script>
+</body>
+</html>

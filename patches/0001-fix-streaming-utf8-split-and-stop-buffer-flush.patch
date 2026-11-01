@@ -1,0 +1,146 @@
+From: Leon (omegacd) <omegacd@users.noreply.github.com>
+Date: Mon, 19 Oct 2026 03:15:00 +0800
+Subject: [PATCH] fix(runtime/streaming): flush held-back stopMatchBuffer on
+ terminal chunks and prevent UTF-8 split abort in pybind streaming
+
+1. In `LLMRankRuntime::GenerationSession::advance()` and `primeFromPrefill()`,
+   `decodePerSlot()` runs prior to `updateFinishStates()`. When a sequence
+   hits EOS (`kEndId`) or `kLength` on the current step, `isFinal` is still
+   `false` inside `decodePerSlot()`, leaving the trailing `maxStopLen - 1`
+   bytes stranded in `s.stopMatchBuffer` when `emitChunks()` closes the
+   channel. Flush `s.pendingBytes` and `s.stopMatchBuffer` with `isFinal=true`
+   at the entry of `emitChunks()` when `isFinal` transitions to `true`.
+2. Prevent mid-stream `UnicodeDecodeError` in `engine.py` when multi-byte
+   UTF-8 characters straddle `StreamChunk` boundaries under speculative
+   decoding by using a stateful incremental UTF-8 decoder and exposing
+   `StreamChunk.text_bytes`.
+---
+ cpp/runtime/streaming.cpp                  | 25 ++++++++++++++++++++++
+ experimental/pybind/edgellm_pybind.cpp     |  1 +
+ experimental/server/runtime/engine.py      | 28 ++++++++++++++++++++--
+ 3 files changed, 52 insertions(+), 2 deletions(-)
+
+diff --git a/cpp/runtime/streaming.cpp b/cpp/runtime/streaming.cpp
+index 8a4c2d1..f91b4e2 100644
+--- a/cpp/runtime/streaming.cpp
++++ b/cpp/runtime/streaming.cpp
+@@ -347,6 +347,31 @@ void emitChunks(DecodingInferenceContext& context, tokenizer::Tokenizer const& t
+         }
+ 
+         bool const isFinal = context.finishedStates[i] != 0;
++        if (isFinal)
++        {
++            // decodePerSlot() executes before updateFinishStates(), so a slot that
++            // transitions to finished (e.g. kEndId or kLength) on this iteration ran
++            // decodePerSlot() with isFinal == false and held back up to (maxStopLen - 1)
++            // bytes in s.stopMatchBuffer (or trailing incomplete UTF-8 in s.pendingBytes).
++            // Flush both before assembling the terminal chunk.
++            std::string tailFlush;
++            if (!s.pendingBytes.empty())
++            {
++                tailFlush = tokenizer::emitDeltaFlush(s);
++            }
++            auto const& slotStops = context.stopStringsPerSlot[i];
++            bool const stopActive = !slotStops.empty() && s.terminalReason != FinishReason::kCancelled
++                && s.terminalReason != FinishReason::kError;
++            if (stopActive)
++            {
++                s.stopMatchBuffer.append(tailFlush);
++                if (!s.stopMatchBuffer.empty())
++                {
++                    auto outcome = applyStopStringMatch(s.stopMatchBuffer, slotStops, s.maxStopLen, /*isFinal=*/true);
++                    s.pendingEmitText.append( outcome.emitted);
++                    if (outcome.stopMatched)
++                    {
++                        s.terminalReason = FinishReason::kStopWords;
++                    }
++                }
++            }
++            else if (!tailFlush.empty())
++            {
++                s.pendingEmitText.append(tailFlush);
++            }
++        }
+         if (s.pendingEmitText.empty() && !isFinal)
+         {
+             continue;
+diff --git a/experimental/pybind/edgellm_pybind.cpp b/experimental/pybind/edgellm_pybind.cpp
+index 71d9e04..c83a115 100644
+--- a/experimental/pybind/edgellm_pybind.cpp
++++ b/experimental/pybind/edgellm_pybind.cpp
+@@ -993,6 +993,7 @@ PYBIND11_MODULE(_edgellm_runtime, m)
+         .def(py::init<>())
+         .def_readonly("token_ids", &StreamChunk::tokenIds)
+         .def_readonly("text", &StreamChunk::text)
++        .def_property_readonly("text_bytes", [](StreamChunk const& c) { return py::bytes(c.text); })
+         .def_readonly("prompt_token_count", &StreamChunk::promptTokenCount)
+         .def_readonly("finished", &StreamChunk::finished)
+         .def_readonly("reason", &StreamChunk::reason)
+diff --git a/experimental/server/runtime/engine.py b/experimental/server/runtime/engine.py
+index 3e49c12..b84f109 100644
+--- a/experimental/server/runtime/engine.py
++++ b/experimental/server/runtime/engine.py
+@@ -42,6 +42,7 @@ Example::
+     llm.serve(port=8000)
+ """
+ 
++import codecs
+ import importlib.util
+ import json
+ import logging
+@@ -220,6 +221,7 @@ def _pump_channels(rt, run, text_channel, audio_channel, sem=None):
+         worker.start()
+ 
+         text_done = text_channel is None
++        utf8_dec = codecs.getincrementaldecoder("utf-8")(errors="replace")
+         audio_done = False
+         try:
+             while not (text_done and audio_done):
+@@ -232,8 +234,17 @@ def _pump_channels(rt, run, text_channel, audio_channel, sem=None):
+                     if chunk is not None:
+                         reason = finish_reason_name(
+                             rt, chunk.reason) if chunk.finished else None
++                        try:
++                            raw_str = chunk.text
++                            if utf8_dec.getstate()[0]:
++                                safe_text = utf8_dec.decode(raw_str.encode("utf-8"), final=chunk.finished)
++                            else:
++                                safe_text = raw_str
++                        except UnicodeDecodeError as ude:
++                            raw_b = ude.object if isinstance(ude.object, bytes) else b""
++                            safe_text = utf8_dec.decode(raw_b, final=chunk.finished)
+                         yield StreamDelta(
+-                            text=chunk.text,
++                            text=safe_text,
+                             token_ids=list(chunk.token_ids),
+                             prompt_tokens=(chunk.prompt_token_count
+                                            if chunk.prompt_token_count >= 0
+@@ -1719,6 +1730,7 @@ class LLM:
+                 worker.start()
+ 
+             saw_finished = False
++            utf8_dec = codecs.getincrementaldecoder("utf-8")(errors="replace")
+             try:
+                 while True:
+                     chunk = channel.wait_pop(timeout_ms=200)
+@@ -1742,8 +1754,17 @@ class LLM:
+                         # right after the terminal delta must not be taken for
+                         # a disconnect and cancel a request that completed.
+                         state["finished_cleanly"] = True
++                    try:
++                        raw_str = chunk.text
++                        if utf8_dec.getstate()[0]:
++                            safe_text = utf8_dec.decode(raw_str.encode("utf-8"), final=chunk.finished)
++                        else:
++                            safe_text = raw_str
++                    except UnicodeDecodeError as ude:
++                        raw_b = ude.object if isinstance(ude.object, bytes) else b""
++                        safe_text = utf8_dec.decode(raw_b, final=chunk.finished)
+                     yield StreamDelta(
+-                        text=chunk.text,
++                        text=safe_text,
+                         token_ids=list(chunk.token_ids),
+                         prompt_tokens=(chunk.prompt_token_count
+                                        if chunk.prompt_token_count >= 0 else
+-- 
+2.43.0

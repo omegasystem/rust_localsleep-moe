@@ -29,6 +29,12 @@ compressed-tensors>=0.6.0
 Pillow>=10.0.0
 numpy>=1.24.0
 
+# Native Desktop Tactical GUI & Direct VRAM Scope (ls_moe_pyqt_gui.py)
+PyQt6>=6.6.0
+glfw>=2.7.0
+PyOpenGL>=3.1.7
+PyOpenGL_accelerate>=3.1.7
+
 # Optional vLLM Backend (Commented out by default; Hybrid Mode uses TensorRT-Edge-LLM Server)
 # vllm>=0.6.4.post1
 # vllm-flash-attn>=2.6.2

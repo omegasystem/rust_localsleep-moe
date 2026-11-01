@@ -1,0 +1,38 @@
+[package]
+name = "rust_localsleep_moe"
+version = "0.1.0"
+edition = "2021"
+authors = ["Kuro (Digital Familiar)", "Leon (S-tier Neuro-Architect)"]
+description = "Zero-Downtime Continual Learning via Bio-Inspired Local Sleep MoE in Pure Rust & CUDA"
+
+[lib]
+name = "rust_localsleep_moe"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "localsleep"
+path = "src/main.rs"
+
+[dependencies]
+# Serialization & Async Runtime
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.38", features = ["full"] }
+crossbeam-channel = "0.5"
+parking_lot = "0.12"
+chrono = { version = "0.4", features = ["serde"] }
+
+# CLI & Utilities
+clap = { version = "4.5", features = ["derive"] }
+rand = "0.8"
+
+# Optional PyO3 Python Extensions
+pyo3 = { version = "0.22", features = ["extension-module"], optional = true }
+
+[build-dependencies]
+cc = { version = "1.0", features = ["parallel"] }
+
+[features]
+default = []
+python = ["pyo3"]
+cuda = []

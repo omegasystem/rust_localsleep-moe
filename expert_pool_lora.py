@@ -59,6 +59,12 @@ class DynamicLoRAExpertPool(nn.Module):
             ka = f"expert.{i}.lora_a"
             kb = f"expert.{i}.lora_b"
             if ka in tensor_dict:
-                self.lora_a[f"exp_{i}"].data.copy_(tensor_dict[ka].to(self.device, dtype=self.dtype))
+                loaded_a = tensor_dict[ka].to(self.device, dtype=self.dtype)
+                # Self-Healing Synaptic Floor: if a saved checkpoint was previously collapsed to 0.0,
+                # automatically re-seed Kaiming uniform weights so the expert never stays dead!
+                if float(torch.norm(loaded_a.float()).item()) < 1e-4:
+                    nn.init.kaiming_uniform_(self.lora_a[f"exp_{i}"], a=5**0.5)
+                else:
+                    self.lora_a[f"exp_{i}"].data.copy_(loaded_a)
             if kb in tensor_dict:
                 self.lora_b[f"exp_{i}"].data.copy_(tensor_dict[kb].to(self.device, dtype=self.dtype))

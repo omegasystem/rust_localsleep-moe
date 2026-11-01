@@ -1,0 +1,254 @@
+diff --git a/cpp/runtime/decoding/logitBias.cpp b/cpp/runtime/decoding/logitBias.cpp
+index b930ee3..ebfcb87 100644
+--- a/cpp/runtime/decoding/logitBias.cpp
++++ b/cpp/runtime/decoding/logitBias.cpp
+@@ -26,7 +26,12 @@
+ #include "sampler/sampling.h"
+ 
+ #include <algorithm>
++#include <atomic>
++#include <cmath>
+ #include <cstddef>
++#include <mutex>
++#include <tuple>
++#include <unordered_map>
+ #include <vector>
+ 
+ namespace trt_edgellm
+@@ -36,6 +41,81 @@ namespace rt
+ namespace
+ {
+ 
++std::mutex gLiveMoeMutex;
++std::atomic<bool> gLiveMoeEnabled{false};
++std::atomic<float> gLiveMoeAlpha{1.0F};
++std::atomic<uint64_t> gLiveMoeVersion{1};
++std::unordered_map<int32_t, float> gLiveMoeBiases;
++
++void syncLiveMoeMailboxToContext(LogitBias& logitBias, DecodingInferenceContext& context)
++{
++    uint64_t const curVer = gLiveMoeVersion.load(std::memory_order_acquire);
++    bool const enabled = gLiveMoeEnabled.load(std::memory_order_relaxed);
++    if (!enabled && logitBias.appliedLiveVersion == 0)
++    {
++        return;
++    }
++    if (logitBias.appliedLiveVersion == curVer)
++    {
++        return;
++    }
++
++    if (context.activeBatchSize <= 0)
++    {
++        return;
++    }
++    if (context.logitBiasPerSlot.size() < static_cast<size_t>(context.activeBatchSize))
++    {
++        context.logitBiasPerSlot.resize(static_cast<size_t>(context.activeBatchSize));
++    }
++
++    std::unordered_map<int32_t, float> snapshot;
++    float const alpha = gLiveMoeAlpha.load(std::memory_order_relaxed);
++    if (enabled && std::fabs(alpha) > 1e-6F)
++    {
++        std::lock_guard<std::mutex> lock(gLiveMoeMutex);
++        snapshot = gLiveMoeBiases;
++    }
++
++    bool anyBias = false;
++    for (int32_t i = 0; i < context.activeBatchSize; ++i)
++    {
++        auto& destination = context.logitBiasPerSlot[static_cast<size_t>(i)];
++        destination.clear();
++        for (auto const& [fullTokenId, rawBias] : snapshot)
++        {
++            float const scaledBias = std::max(-100.0F, std::min(100.0F, rawBias * alpha));
++            if (!std::isfinite(scaledBias) || std::fabs(scaledBias) < 1e-5F)
++            {
++                continue;
++            }
++            int32_t outputTokenId = fullTokenId;
++            if (!logitBias.fullToReducedVocabMap.empty())
++            {
++                if (fullTokenId < 0 || static_cast<size_t>(fullTokenId) >= logitBias.fullToReducedVocabMap.size())
++                {
++                    continue;
++                }
++                int32_t const reducedTokenId = logitBias.fullToReducedVocabMap[static_cast<size_t>(fullTokenId)];
++                if (reducedTokenId < 0)
++                {
++                    continue;
++                }
++                outputTokenId = reducedTokenId;
++            }
++            if (destination.size() < limits::security::kMaxLogitBiasTokens)
++            {
++                destination[outputTokenId] = scaledBias;
++                anyBias = true;
++            }
++        }
++    }
++
++    context.hasLogitBias = anyBias;
++    context.logitBiasGpuDirty = true;
++    logitBias.appliedLiveVersion = enabled ? curVer : 0;
++}
++
+ void applySamplerLogitBiasRepeatedRows(
+     LogitBias const& logitBias, Tensor& logits, int32_t rowsPerSlot, cudaStream_t stream)
+ {
+@@ -146,6 +226,7 @@ bool hasLogitBias(LLMGenerationRequest const& request) noexcept
+ void prepareLogitBias(
+     LogitBias const& logitBias, LLMGenerationRequest const& request, DecodingInferenceContext& context)
+ {
++    const_cast<LogitBias&>(logitBias).appliedLiveVersion = 0;
+     context.logitBiasPerSlot.clear();
+     context.logitBiasPerSlot.resize(static_cast<size_t>(context.activeBatchSize));
+     context.hasLogitBias = false;
+@@ -184,6 +265,28 @@ void prepareLogitBias(
+     context.logitBiasGpuDirty = context.hasLogitBias;
+ }
+ 
++void setLiveMoeLogitBias(
++    bool enabled, float alpha, std::unordered_map<int32_t, float> const& liveBiases)
++{
++    {
++        std::lock_guard<std::mutex> lock(gLiveMoeMutex);
++        gLiveMoeBiases = liveBiases;
++    }
++    gLiveMoeAlpha.store(alpha, std::memory_order_relaxed);
++    gLiveMoeEnabled.store(enabled, std::memory_order_relaxed);
++    gLiveMoeVersion.fetch_add(1, std::memory_order_release);
++}
++
++std::tuple<bool, float, uint64_t, size_t> getLiveMoeLogitBiasState() noexcept
++{
++    std::lock_guard<std::mutex> lock(gLiveMoeMutex);
++    return std::make_tuple(
++        gLiveMoeEnabled.load(std::memory_order_relaxed),
++        gLiveMoeAlpha.load(std::memory_order_relaxed),
++        gLiveMoeVersion.load(std::memory_order_relaxed),
++        gLiveMoeBiases.size());
++}
++
+ void applyLogitBias(LogitBias& logitBias, Tensor& logits, DecodingInferenceContext& context, cudaStream_t stream)
+ {
+     applyLogitBiasRepeatedRows(logitBias, logits, context, 1, stream);
+@@ -192,6 +295,7 @@ void applyLogitBias(LogitBias& logitBias, Tensor& logits, DecodingInferenceConte
+ void applyLogitBiasRepeatedRows(
+     LogitBias& logitBias, Tensor& logits, DecodingInferenceContext& context, int32_t rowsPerSlot, cudaStream_t stream)
+ {
++    syncLiveMoeMailboxToContext(logitBias, context);
+     if (!context.hasLogitBias)
+     {
+         return;
+diff --git a/cpp/runtime/decoding/logitBias.h b/cpp/runtime/decoding/logitBias.h
+index e250e2b..5f56a25 100644
+--- a/cpp/runtime/decoding/logitBias.h
++++ b/cpp/runtime/decoding/logitBias.h
+@@ -20,6 +20,8 @@
+ #include "common/tensor.h"
+ 
+ #include <cstdint>
++#include <tuple>
++#include <unordered_map>
+ #include <vector>
+ 
+ namespace trt_edgellm
+@@ -30,6 +32,14 @@ namespace rt
+ struct DecodingInferenceContext;
+ struct LLMGenerationRequest;
+ 
++/*!
++ * @brief Hot-swappable live MoE VRAM logit-bias mailbox control.
++ */
++void setLiveMoeLogitBias(
++    bool enabled, float alpha, std::unordered_map<int32_t, float> const& liveBiases);
++
++std::tuple<bool, float, uint64_t, size_t> getLiveMoeLogitBiasState() noexcept;
++
+ /*!
+  * @brief Runtime-owned storage for sparse per-request logit biases.
+  *
+@@ -46,6 +56,7 @@ struct LogitBias
+     std::vector<int32_t> hostTokenIds;          //!< Reused host staging for token IDs
+     std::vector<float> hostValues;              //!< Reused host staging for bias values
+     std::vector<int32_t> fullToReducedVocabMap; //!< Full token ID to reduced output-vocabulary index
++    uint64_t appliedLiveVersion{0};             //!< Last applied live MoE mailbox version on GPU
+ };
+ 
+ /*!
+diff --git a/experimental/pybind/edgellm_pybind.cpp b/experimental/pybind/edgellm_pybind.cpp
+index 1261bd9..12544cf 100644
+--- a/experimental/pybind/edgellm_pybind.cpp
++++ b/experimental/pybind/edgellm_pybind.cpp
+@@ -1340,4 +1340,27 @@ PYBIND11_MODULE(_edgellm_runtime, m)
+         py::arg("logit_bias") = std::unordered_map<int32_t, float>{}, py::arg("num_logprobs") = 0,
+         py::arg("guided_decoding") = std::optional<GuidedDecodingParams>{},
+         "Create a generation request from a batch of message lists.");
++
++    m.def(
++        "set_live_moe_logit_bias",
++        [](bool enabled, float alpha, std::unordered_map<int32_t, float> const& liveBiases) {
++            py::gil_scoped_release release;
++            trt_edgellm::rt::setLiveMoeLogitBias(enabled, alpha, liveBiases);
++        },
++        py::arg("enabled") = true, py::arg("alpha") = 1.0f,
++        py::arg("live_biases") = std::unordered_map<int32_t, float>{},
++        "Hot-swappable in-VRAM MoE logit bias mailbox updated mid-stream before C++ sampling.");
++
++    m.def(
++        "get_live_moe_logit_bias_state",
++        []() {
++            auto [enabled, alpha, ver, cnt] = trt_edgellm::rt::getLiveMoeLogitBiasState();
++            py::dict d;
++            d["enabled"] = enabled;
++            d["alpha"] = alpha;
++            d["version"] = ver;
++            d["num_entries"] = cnt;
++            return d;
++        },
++        "Inspect current hot-swappable in-VRAM MoE logit bias mailbox state.");
+ }
+diff --git a/experimental/server/api/routes.py b/experimental/server/api/routes.py
+index 6b4dac9..e1bb9f0 100644
+--- a/experimental/server/api/routes.py
++++ b/experimental/server/api/routes.py
+@@ -115,6 +115,37 @@ async def chat_completions(body: ChatCompletionRequest, request: Request):
+     return JSONResponse(response.model_dump(exclude_none=True))
+ 
+ 
++@router.post("/v1/moe/live_gate")
++async def update_live_moe_vram_gate(request: Request):
++    """Hot-swappable mid-stream VRAM logit bias mailbox endpoint for LocalSleep-MoE."""
++    payload = await request.json()
++    enabled = bool(payload.get("enabled", True))
++    alpha = float(payload.get("alpha", 1.0))
++    raw_biases = payload.get("logit_bias") or {}
++    clean_biases = {}
++    for k, v in raw_biases.items():
++        try:
++            clean_biases[int(k)] = float(v)
++        except (ValueError, TypeError):
++            continue
++    from ..runtime.engine import _import_runtime
++    rt = _import_runtime()
++    if hasattr(rt, "set_live_moe_logit_bias"):
++        rt.set_live_moe_logit_bias(enabled, alpha, clean_biases)
++        state = rt.get_live_moe_logit_bias_state() if hasattr(rt, "get_live_moe_logit_bias_state") else {}
++        return JSONResponse({"status": "ok", "mode": "c++_vram_mailbox", "state": state})
++    return JSONResponse({"status": "fallback", "mode": "pybind_not_rebuilt_yet"}, status_code=200)
++
++
++@router.get("/v1/moe/live_gate")
++async def get_live_moe_vram_gate():
++    from ..runtime.engine import _import_runtime
++    rt = _import_runtime()
++    if hasattr(rt, "get_live_moe_logit_bias_state"):
++        return JSONResponse({"status": "ok", "state": rt.get_live_moe_logit_bias_state()})
++    return JSONResponse({"status": "fallback", "state": {"enabled": False, "alpha": 0.0, "version": 0, "num_entries": 0}})
++
++
+ def _anthropic_error(exc: Exception) -> JSONResponse:
+     status = exc.status_code if isinstance(exc, ServerError) else 400
+     if status == 429:

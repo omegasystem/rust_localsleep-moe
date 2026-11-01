@@ -1,0 +1,350 @@
+{
+  "active_cube_id": "gen_018_20261031_143847_matryoshka_L1",
+  "base_cube_id": "gen_010_20261031_140905_matryoshka_L1",
+  "active_cube_path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_018_20261031_143847_matryoshka_L1",
+  "last_rotation_at": "2026-10-31T14:39:51",
+  "cubes": [
+    {
+      "cube_id": "gen_000_origin",
+      "generation": 0,
+      "parent_cube_id": null,
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe",
+      "created_at": "2026-10-31T12:38:00",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "summary": "Origin Base Architecture (rust_localsleep-moe v0.1.0)"
+    },
+    {
+      "cube_id": "gen_001_20261031_123813_hypercube_rsi",
+      "generation": 1,
+      "parent_cube_id": "gen_000_origin",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_001_20261031_123813_hypercube_rsi",
+      "rel_path": "hypercube_generations/gen_001_20261031_123813_hypercube_rsi",
+      "created_at": "2026-10-31T12:38:13",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 14,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_001_20261031_123813_hypercube_rsi\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T12:38:40"
+    },
+    {
+      "cube_id": "gen_002_20261031_131749_matryoshka_L1",
+      "generation": 2,
+      "parent_cube_id": "gen_001_20261031_123813_hypercube_rsi",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_002_20261031_131749_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_002_20261031_131749_matryoshka_L1",
+      "created_at": "2026-10-31T13:17:49",
+      "status": "GESTATING",
+      "verified": false,
+      "copied_files": 7,
+      "summary": "Generation #2 Offspring Cube cloned from gen_001_20261031_123813_hypercube_rsi"
+    },
+    {
+      "cube_id": "gen_003_20261031_132418_matryoshka_L1",
+      "generation": 3,
+      "parent_cube_id": "gen_001_20261031_123813_hypercube_rsi",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_003_20261031_132418_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_003_20261031_132418_matryoshka_L1",
+      "created_at": "2026-10-31T13:24:18",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_003_20261031_132418_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T13:24:56"
+    },
+    {
+      "cube_id": "gen_004_20261031_133324_matryoshka_L1",
+      "generation": 4,
+      "parent_cube_id": "gen_003_20261031_132418_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_004_20261031_133324_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_004_20261031_133324_matryoshka_L1",
+      "created_at": "2026-10-31T13:33:24",
+      "status": "VERIFIED_READY_FOR_SWAP",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_004_20261031_133324_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T13:34:22"
+    },
+    {
+      "cube_id": "gen_005_20261031_135240_matryoshka_L1",
+      "generation": 5,
+      "parent_cube_id": "gen_003_20261031_132418_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_005_20261031_135240_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_005_20261031_135240_matryoshka_L1",
+      "created_at": "2026-10-31T13:52:40",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_005_20261031_135240_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T13:53:43"
+    },
+    {
+      "cube_id": "gen_006_20261031_140247_matryoshka_L1",
+      "generation": 6,
+      "parent_cube_id": "gen_005_20261031_135240_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_006_20261031_140247_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_006_20261031_140247_matryoshka_L1",
+      "created_at": "2026-10-31T14:02:47",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_006_20261031_140247_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:03:48"
+    },
+    {
+      "cube_id": "gen_007_20261031_140402_matryoshka_L1",
+      "generation": 7,
+      "parent_cube_id": "gen_006_20261031_140247_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_007_20261031_140402_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_007_20261031_140402_matryoshka_L1",
+      "created_at": "2026-10-31T14:04:02",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_007_20261031_140402_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:05:05"
+    },
+    {
+      "cube_id": "gen_008_20261031_140525_matryoshka_L1",
+      "generation": 8,
+      "parent_cube_id": "gen_007_20261031_140402_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_008_20261031_140525_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_008_20261031_140525_matryoshka_L1",
+      "created_at": "2026-10-31T14:05:25",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_008_20261031_140525_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:06:28"
+    },
+    {
+      "cube_id": "gen_009_20261031_140747_matryoshka_L1",
+      "generation": 9,
+      "parent_cube_id": "gen_008_20261031_140525_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_009_20261031_140747_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_009_20261031_140747_matryoshka_L1",
+      "created_at": "2026-10-31T14:07:47",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_009_20261031_140747_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:08:49"
+    },
+    {
+      "cube_id": "gen_010_20261031_140905_matryoshka_L1",
+      "generation": 10,
+      "parent_cube_id": "gen_009_20261031_140747_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_010_20261031_140905_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_010_20261031_140905_matryoshka_L1",
+      "created_at": "2026-10-31T14:09:05",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_010_20261031_140905_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:10:07"
+    },
+    {
+      "cube_id": "gen_011_20261031_141023_matryoshka_L1",
+      "generation": 11,
+      "parent_cube_id": "gen_010_20261031_140905_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_011_20261031_141023_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_011_20261031_141023_matryoshka_L1",
+      "created_at": "2026-10-31T14:10:23",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_011_20261031_141023_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:11:25"
+    },
+    {
+      "cube_id": "gen_012_20261031_141140_matryoshka_L1",
+      "generation": 12,
+      "parent_cube_id": "gen_011_20261031_141023_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_012_20261031_141140_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_012_20261031_141140_matryoshka_L1",
+      "created_at": "2026-10-31T14:11:40",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_012_20261031_141140_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:12:42"
+    },
+    {
+      "cube_id": "gen_013_20261031_141300_matryoshka_L1",
+      "generation": 13,
+      "parent_cube_id": "gen_012_20261031_141140_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_013_20261031_141300_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_013_20261031_141300_matryoshka_L1",
+      "created_at": "2026-10-31T14:13:00",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_013_20261031_141300_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:14:03"
+    },
+    {
+      "cube_id": "gen_014_20261031_142112_matryoshka_L1",
+      "generation": 14,
+      "parent_cube_id": "gen_013_20261031_141300_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_014_20261031_142112_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_014_20261031_142112_matryoshka_L1",
+      "created_at": "2026-10-31T14:21:12",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_014_20261031_142112_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:22:14"
+    },
+    {
+      "cube_id": "gen_015_20261031_143315_matryoshka_L1",
+      "generation": 15,
+      "parent_cube_id": "gen_010_20261031_140905_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_015_20261031_143315_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_015_20261031_143315_matryoshka_L1",
+      "created_at": "2026-10-31T14:33:15",
+      "status": "VERIFIED_READY_FOR_SWAP",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_015_20261031_143315_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:34:13"
+    },
+    {
+      "cube_id": "gen_016_20261031_143415_matryoshka_L1",
+      "generation": 16,
+      "parent_cube_id": "gen_010_20261031_140905_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_016_20261031_143415_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_016_20261031_143415_matryoshka_L1",
+      "created_at": "2026-10-31T14:34:15",
+      "status": "VERIFIED_READY_FOR_SWAP",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_016_20261031_143415_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:35:16"
+    },
+    {
+      "cube_id": "gen_017_20261031_143517_matryoshka_L1",
+      "generation": 17,
+      "parent_cube_id": "gen_010_20261031_140905_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_017_20261031_143517_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_017_20261031_143517_matryoshka_L1",
+      "created_at": "2026-10-31T14:35:17",
+      "status": "GESTATING",
+      "verified": false,
+      "copied_files": 7,
+      "summary": "Generation #17 Offspring Cube cloned from gen_010_20261031_140905_matryoshka_L1"
+    },
+    {
+      "cube_id": "gen_018_20261031_143847_matryoshka_L1",
+      "generation": 18,
+      "parent_cube_id": "gen_010_20261031_140905_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_018_20261031_143847_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_018_20261031_143847_matryoshka_L1",
+      "created_at": "2026-10-31T14:38:47",
+      "status": "ACTIVE_EXECUTION_CUBE",
+      "verified": true,
+      "copied_files": 7,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_018_20261031_143847_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-10-31T14:39:34"
+    }
+  ],
+  "rotation_history": [
+    {
+      "timestamp": "2026-10-31T12:38:40",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_001_20261031_123813_hypercube_rsi",
+      "new_base_cube": "gen_000_origin",
+      "previous_base_cube": "gen_000_origin"
+    },
+    {
+      "timestamp": "2026-10-31T13:24:56",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_003_20261031_132418_matryoshka_L1",
+      "new_base_cube": "gen_001_20261031_123813_hypercube_rsi",
+      "previous_base_cube": "gen_000_origin"
+    },
+    {
+      "timestamp": "2026-10-31T13:53:43",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_005_20261031_135240_matryoshka_L1",
+      "new_base_cube": "gen_003_20261031_132418_matryoshka_L1",
+      "previous_base_cube": "gen_001_20261031_123813_hypercube_rsi"
+    },
+    {
+      "timestamp": "2026-10-31T14:04:01",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_006_20261031_140247_matryoshka_L1",
+      "new_base_cube": "gen_005_20261031_135240_matryoshka_L1",
+      "previous_base_cube": "gen_003_20261031_132418_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-10-31T14:05:24",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_007_20261031_140402_matryoshka_L1",
+      "new_base_cube": "gen_006_20261031_140247_matryoshka_L1",
+      "previous_base_cube": "gen_005_20261031_135240_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-10-31T14:06:43",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_008_20261031_140525_matryoshka_L1",
+      "new_base_cube": "gen_007_20261031_140402_matryoshka_L1",
+      "previous_base_cube": "gen_006_20261031_140247_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-10-31T14:09:04",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_009_20261031_140747_matryoshka_L1",
+      "new_base_cube": "gen_008_20261031_140525_matryoshka_L1",
+      "previous_base_cube": "gen_007_20261031_140402_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-10-31T14:10:22",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_010_20261031_140905_matryoshka_L1",
+      "new_base_cube": "gen_009_20261031_140747_matryoshka_L1",
+      "previous_base_cube": "gen_008_20261031_140525_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-10-31T14:11:38",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_011_20261031_141023_matryoshka_L1",
+      "new_base_cube": "gen_010_20261031_140905_matryoshka_L1",
+      "previous_base_cube": "gen_009_20261031_140747_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-10-31T14:12:59",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_012_20261031_141140_matryoshka_L1",
+      "new_base_cube": "gen_011_20261031_141023_matryoshka_L1",
+      "previous_base_cube": "gen_010_20261031_140905_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-10-31T14:14:20",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_013_20261031_141300_matryoshka_L1",
+      "new_base_cube": "gen_012_20261031_141140_matryoshka_L1",
+      "previous_base_cube": "gen_011_20261031_141023_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-10-31T14:22:28",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_014_20261031_142112_matryoshka_L1",
+      "new_base_cube": "gen_013_20261031_141300_matryoshka_L1",
+      "previous_base_cube": "gen_012_20261031_141140_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-10-31T06:27:59",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_010_20261031_140905_matryoshka_L1",
+      "new_base_cube": "gen_014_20261031_142112_matryoshka_L1",
+      "previous_base_cube": "gen_013_20261031_141300_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-10-31T14:39:51",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_018_20261031_143847_matryoshka_L1",
+      "new_base_cube": "gen_010_20261031_140905_matryoshka_L1",
+      "previous_base_cube": "gen_014_20261031_142112_matryoshka_L1"
+    }
+  ]
+}

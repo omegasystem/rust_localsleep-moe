@@ -31,11 +31,7 @@
         "repetition_penalty": 1.0
       },
       "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n若需執行工具，請輸出：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\"}}</tool_call>\n若需生成並儲存程式碼檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
-      "stop_tokens": [
-        "<end_of_turn>",
-        "<|im_end|>",
-        "<|endoftext|>"
-      ]
+      "stop_tokens": []
     },
     "thor_12b": {
       "backend": "local-hf",
@@ -63,8 +59,8 @@
     "thor_31b": {
       "backend": "trt-edgellm",
       "server_url": "http://192.168.50.67:8000",
-      "model_id": "gemma-4-31B-it",
-      "model_path": "/home/omegacd/local_models/gemma-4-31B-it",
+      "model_id": "Gemma-4-31B-IT-NVFP4",
+      "model_path": "/home/omegacd/local_models/Gemma-4-31B-IT-NVFP4",
       "dtype": "bfloat16",
       "device_map": "auto",
       "hidden_dim": 5376,
@@ -79,23 +75,52 @@
       "shy_lambda": 0.08,
       "enable_2_4_sparsity": true,
       "enable_swa": true,
-      "swa_window_size": 4096,
+      "swa_window_size": 16384,
       "swa_sink_size": 4,
       "telemetry_port": 8765,
       "hyperparameters": {
         "max_context_tokens": 32768,
-        "max_generation_tokens": 2048,
+        "max_generation_tokens": 16384,
         "temperature": 0.6,
         "top_p": 0.9,
         "top_k": 50,
         "repetition_penalty": 1.0
       },
-      "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n若需執行工具，請輸出：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\"}}</tool_call>\n若需生成並儲存程式碼檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
-      "stop_tokens": [
-        "<end_of_turn>",
-        "<|im_end|>",
-        "<|endoftext|>"
-      ]
+      "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n支援工具呼叫 (<tool_call>{...}</tool_call>)：\n1. 讀取檔案 (預設完整讀取 mode=\"full\")：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\", \"mode\": \"full\"}}</tool_call>\n2. 局部修改檔案 (Block/Line-Range)：<tool_call>{\"action\": \"edit_file\", \"args\": {\"path\": \"...\", \"old_text\": \"...\", \"new_text\": \"...\"}}</tool_call> (或傳入 \"start_line\", \"end_line\", \"new_text\")\n3. 沙盒內執行命令 (僅限 isolated 區域的 Python/Shell/Rust)：<tool_call>{\"action\": \"run_sandbox_shell\", \"args\": {\"command\": \"python3 mock_evaluator.py\"}}</tool_call>\n若需生成並儲存全新檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
+      "stop_tokens": []
+    },
+    "thor_31bnvfp4": {
+      "backend": "trt-edgellm",
+      "server_url": "http://192.168.50.67:8000",
+      "model_id": "Gemma-4-31B-IT-NVFP4",
+      "model_path": "/home/omegacd/local_models/Gemma-4-31B-IT-NVFP4",
+      "dtype": "bfloat16",
+      "device_map": "auto",
+      "hidden_dim": 5376,
+      "num_experts": 8,
+      "top_k": 2,
+      "lora_rank": 32,
+      "lora_alpha": 64.0,
+      "fatigue_threshold": 1.6,
+      "wake_threshold": 0.35,
+      "decay_rate": 0.015,
+      "sleep_duration": 25,
+      "shy_lambda": 0.08,
+      "enable_2_4_sparsity": true,
+      "enable_swa": true,
+      "swa_window_size": 16384,
+      "swa_sink_size": 4,
+      "telemetry_port": 8765,
+      "hyperparameters": {
+        "max_context_tokens": 32768,
+        "max_generation_tokens": 16384,
+        "temperature": 0.6,
+        "top_p": 0.9,
+        "top_k": 50,
+        "repetition_penalty": 1.0
+      },
+      "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n支援工具呼叫 (<tool_call>{...}</tool_call>)：\n1. 讀取檔案 (預設完整讀取 mode=\"full\")：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\", \"mode\": \"full\"}}</tool_call>\n2. 局部修改檔案 (Block/Line-Range)：<tool_call>{\"action\": \"edit_file\", \"args\": {\"path\": \"...\", \"old_text\": \"...\", \"new_text\": \"...\"}}</tool_call> (或傳入 \"start_line\", \"end_line\", \"new_text\")\n3. 沙盒內執行命令 (僅限 isolated 區域的 Python/Shell/Rust)：<tool_call>{\"action\": \"run_sandbox_shell\", \"args\": {\"command\": \"python3 mock_evaluator.py\"}}</tool_call>\n若需生成並儲存全新檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
+      "stop_tokens": []
     },
     "thor_26b_a4b": {
       "backend": "local-hf",
@@ -147,6 +172,82 @@
           "response_template": "<|im_end|>\n<|im_start|>tool\n{tool_output}<|im_end|>\n<|im_start|>assistant\n"
         }
       }
+    },
+    "thor_31b_direct": {
+      "backend": "trt-direct",
+      "server_url": "http://192.168.50.67:8000",
+      "model_id": "gemma-4-31B-it",
+      "model_path": "/home/omegacd/local_models/gemma-4-31B-it",
+      "dtype": "bfloat16",
+      "device_map": "auto",
+      "hidden_dim": 5376,
+      "num_experts": 8,
+      "top_k": 2,
+      "lora_rank": 32,
+      "lora_alpha": 64.0,
+      "fatigue_threshold": 1.6,
+      "wake_threshold": 0.35,
+      "decay_rate": 0.015,
+      "sleep_duration": 25,
+      "shy_lambda": 0.08,
+      "enable_2_4_sparsity": true,
+      "enable_swa": true,
+      "swa_window_size": 4096,
+      "swa_sink_size": 4,
+      "telemetry_port": 8765,
+      "hyperparameters": {
+        "max_context_tokens": 32768,
+        "max_generation_tokens": 2048,
+        "temperature": 0.6,
+        "top_p": 0.9,
+        "top_k": 50,
+        "repetition_penalty": 1.0
+      },
+      "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n若需執行工具，請輸出：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\"}}</tool_call>\n若需生成並儲存程式碼檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
+      "stop_tokens": [],
+      "speculative_config": {
+        "method": "mtp",
+        "num_speculative_tokens": 5
+      },
+      "max_input_len": 8192,
+      "max_kv_cache_capacity": 32768
+    },
+    "rtx5080_bolt_e4b_gguf": {
+      "backend": "gguf",
+      "server_url": "http://127.0.0.1:8000",
+      "model_id": "nemotron-bolt",
+      "model_path": "/home/node/.openclaw/workspace/projects/models/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB/Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf",
+      "dtype": "bfloat16",
+      "device_map": "auto",
+      "hidden_dim": 2560,
+      "num_experts": 8,
+      "top_k": 2,
+      "lora_rank": 16,
+      "lora_alpha": 32.0,
+      "fatigue_threshold": 1.6,
+      "wake_threshold": 0.35,
+      "decay_rate": 0.015,
+      "sleep_duration": 25,
+      "shy_lambda": 0.08,
+      "enable_2_4_sparsity": true,
+      "enable_swa": true,
+      "swa_window_size": 4096,
+      "swa_sink_size": 4,
+      "telemetry_port": 8765,
+      "hyperparameters": {
+        "max_context_tokens": 65536,
+        "max_generation_tokens": 4096,
+        "temperature": 1.0,
+        "top_p": 0.95,
+        "top_k": 50,
+        "repetition_penalty": 1.0
+      },
+      "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n若需執行工具，請輸出：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\"}}</tool_call>\n若需生成並儲存程式碼檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
+      "stop_tokens": [
+        "<|tool_response>",
+        "<turn|>",
+        "<end_of_turn>"
+      ]
     }
   }
 }
