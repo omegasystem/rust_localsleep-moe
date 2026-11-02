@@ -206,6 +206,9 @@ class StreamInferenceWorker(QThread):
             micro_chunk_limit = int(getattr(self.engine, "micro_chunk_tokens", 0) or 0)
             micro_slice_count = 0
 
+            if self.engine.expert_pool is not None and hasattr(self.engine.expert_pool, "begin_eligibility_episode"):
+                self.engine.expert_pool.begin_eligibility_episode()
+
             while True:
                 remaining_budget = max(16, self.engine.max_tokens - completion_tokens)
                 eff_max_toks = min(micro_chunk_limit, remaining_budget) if micro_chunk_limit > 0 else remaining_budget
@@ -274,12 +277,12 @@ class StreamInferenceWorker(QThread):
                                     top_tids = [int(x.get("token_id") or 0) for x in top_lps] or [tid]
                                     top_vals = [float(x.get("logprob") or -1.0) for x in top_lps] or [float(entry.get("logprob") or -0.1)]
                                     top_probs = [math.exp(max(-20.0, min(0.0, v))) for v in top_vals]
-                                    w, sel, ent, _ = self.engine._step_local_rust_moe(tid, top_tids, top_vals)
+                                    tok_str_rec = str(entry.get("token") or entry.get("piece") or (cleaned_piece if idx_lp == 0 else ""))
+                                    w, sel, ent, _ = self.engine._step_local_rust_moe(tid, top_tids, top_vals, token_piece=tok_str_rec)
                                     last_weights, last_experts = w, sel
                                     entropy_sum += ent
                                     chunk_steps += 1
                                     cur_el = max(0.001, time.time() - t0)
-                                    tok_str_rec = str(entry.get("token") or entry.get("piece") or (cleaned_piece if idx_lp == 0 else ""))
                                     self.session_logger.record_token_telemetry(
                                         token_id=tid,
                                         token_str=tok_str_rec,
@@ -294,7 +297,7 @@ class StreamInferenceWorker(QThread):
                                     self.sig_token.emit(ui_piece, tid, float(ent), list(sel), list(w))
                             else:
                                 synth_tid = sum(ord(c) * (i + 1) for i, c in enumerate(content)) % 32000
-                                w, sel, ent, _ = self.engine._step_local_rust_moe(synth_tid, [synth_tid], [-0.15])
+                                w, sel, ent, _ = self.engine._step_local_rust_moe(synth_tid, [synth_tid], [-0.15], token_piece=cleaned_piece)
                                 last_weights, last_experts = w, sel
                                 entropy_sum += ent
                                 chunk_steps += 1
@@ -349,7 +352,19 @@ class StreamInferenceWorker(QThread):
                         )
                     else:
                         ui_preview = tool_output
-                    tool_banner = f"\n\n📥 [Sandbox Tool Executed (#{tool_calls_count}: {act})]:\n{ui_preview}\n⚡ [Kuro Post-Tool Stream]: "
+
+                    elig_note = ""
+                    if self.engine.expert_pool is not None and hasattr(self.engine.expert_pool, "settle_eligibility_trace"):
+                        if "EXIT_CODE: 0" in str(tool_output):
+                            st_tag = self.engine.expert_pool.settle_eligibility_trace(sandbox_passed=True)
+                            elig_note = f"\n🧬 [Eligibility Trace -> {st_tag}] 沙盒驗證通過，短期赫布跡象已固化為長期突觸記憶！"
+                            self.sig_status.emit(f"🧬 [資格跡固化 {st_tag}] EXIT_CODE=0，已將短期赫布跡象鎖定寫入長期 LoRA 權重！")
+                        elif "EXIT_CODE:" in str(tool_output):
+                            st_tag = self.engine.expert_pool.settle_eligibility_trace(sandbox_passed=False)
+                            elig_note = f"\n🛡️ [Eligibility Trace -> {st_tag}] 攔截沙盒失敗路徑，已執行反赫布回滾以保護長期突觸快照！"
+                            self.sig_status.emit(f"🛡️ [資格跡回滾 {st_tag}] EXIT_CODE!=0，已退回 LTM 基準並對錯誤路徑執行 Anti-Hebbian 抑制！")
+
+                    tool_banner = f"\n\n📥 [Sandbox Tool Executed (#{tool_calls_count}: {act})]:\n{ui_preview}{elig_note}\n⚡ [Kuro Post-Tool Stream]: "
                     self.sig_token.emit(tool_banner, 0, 0.3, last_experts, last_weights)
                     accumulated_text += tool_banner
 

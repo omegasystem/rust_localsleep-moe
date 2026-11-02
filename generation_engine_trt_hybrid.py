@@ -130,18 +130,39 @@ class FallbackFatigueRouter:
         synth_tid = int(abs(sum(hidden_states[:32])) * 10000) % 32000
         return self.forward_from_token_logprobs(synth_tid, [synth_tid], [-0.1])
 
-    def step_decay(self) -> List[int]:
+    @staticmethod
+    def is_syntax_boundary_token(token_piece: str) -> bool:
+        """
+        [Syntax-Aware Local Sleep]
+        Returns True if the current token piece contains a logical/syntactic boundary
+        (newline, statement terminator, block delimiter, punctuation) where a fatigued
+        expert can cleanly enter NREM sleep without breaking mid-line code style.
+        """
+        if not token_piece:
+            return False
+        for marker in ("\n", ";", "}", ")", ":", ".", "。", "!", "?", "</file>", "</tool_call>"):
+            if marker in token_piece:
+                return True
+        return False
+
+    def step_decay(self, is_syntax_boundary: bool = True) -> List[int]:
         with self._lock:
             awake_count = sum(1 for s in self.states if s != 2)
             newly_sleeping: List[int] = []
+            hard_fatigue_cap = self.fatigue_threshold * 1.35
             for k in range(self.num_experts):
                 if self.states[k] != 2 and self.fatigue_scores[k] >= self.fatigue_threshold and awake_count > self.top_k:
-                    self.states[k] = 2
-                    self.sleep_countdown[k] = self.sleep_duration
-                    self.sleep_cycle_counts[k] += 1
-                    self.sparsity_pct[k] = 50.0  # 2:4 structural sparsity
-                    awake_count -= 1
-                    newly_sleeping.append(k)
+                    # Syntax-Aware Local Sleep: if fatigue crossed soft threshold, arm sleep (state=1)
+                    # and wait for the next syntax boundary (\n, ;, }, etc.) unless hard safety cap is hit!
+                    if is_syntax_boundary or self.fatigue_scores[k] >= hard_fatigue_cap:
+                        self.states[k] = 2
+                        self.sleep_countdown[k] = self.sleep_duration
+                        self.sleep_cycle_counts[k] += 1
+                        self.sparsity_pct[k] = 50.0  # 2:4 structural sparsity
+                        awake_count -= 1
+                        newly_sleeping.append(k)
+                    else:
+                        self.states[k] = 1  # Armed for sleep at next syntax boundary!
                 elif self.states[k] == 0 and self.fatigue_scores[k] >= self.fatigue_threshold * 0.8:
                     self.states[k] = 1
 
@@ -325,6 +346,7 @@ class TrtEdgeLlmHybridEngine:
         token_id: int,
         top_token_ids: List[int],
         top_logprobs: List[float],
+        token_piece: str = "",
     ) -> Tuple[List[float], List[int], float, List[int]]:
         if hasattr(self.rust_router, "forward_from_token_logprobs"):
             weights, selected_exp, entropy = self.rust_router.forward_from_token_logprobs(
@@ -336,7 +358,11 @@ class TrtEdgeLlmHybridEngine:
             synth = [math.sin((token_id + d) * 0.01) * 0.02 for d in range(self.hidden_dim)]
             weights, selected_exp, entropy = self.rust_router.forward(synth, 1)
 
-        res_decay = self.rust_router.step_decay()
+        is_boundary = FallbackFatigueRouter.is_syntax_boundary_token(token_piece) if token_piece else True
+        try:
+            res_decay = self.rust_router.step_decay(is_syntax_boundary=is_boundary)
+        except TypeError:
+            res_decay = self.rust_router.step_decay()
         newly_sleeping = list(res_decay) if isinstance(res_decay, (list, tuple)) else []
 
         if newly_sleeping:
@@ -372,6 +398,7 @@ class TrtEdgeLlmHybridEngine:
                     exp_key = f"exp_{eid}"
                     if exp_key in self.expert_pool.lora_a:
                         la = self.expert_pool.lora_a[exp_key].data
+                        pre_step_a = la.detach().clone()
                         cur_norm = float(torch.norm(la.float()).item())
 
                         # If previously pinned at uniform 0.450 floor, immediately unpin with expert-specific natural spread
@@ -397,6 +424,9 @@ class TrtEdgeLlmHybridEngine:
                         new_norm = float(torch.norm(la.float()).item())
                         if new_norm > 2.80:
                             la.mul_(2.80 / new_norm)
+
+                        if hasattr(self.expert_pool, "accumulate_eligibility_trace"):
+                            self.expert_pool.accumulate_eligibility_trace(exp_key, pre_step_a)
 
                 # Closed-Loop Synaptic Logit Projection directly from active 2:4 sparse LoRA_A synapses!
                 # (Fixes standard LoRA zero-initialized B matrix causing delta_norm == 0.0 and skipping mid-stream pushes!)
@@ -534,7 +564,7 @@ class TrtEdgeLlmHybridEngine:
                             top_tids = [int(x.get("token_id") or 0) for x in top_lps] or [tid]
                             top_vals = [float(x.get("logprob") or -1.0) for x in top_lps] or [float(entry.get("logprob") or -0.1)]
                             top_probs = [math.exp(max(-20.0, min(0.0, v))) for v in top_vals]
-                            w, sel, ent, slp = self._step_local_rust_moe(tid, top_tids, top_vals)
+                            w, sel, ent, slp = self._step_local_rust_moe(tid, top_tids, top_vals, token_piece=tok_piece)
                             last_weights, last_experts = w, sel
                             entropy_sum += ent
                             chunk_steps += 1
@@ -554,7 +584,7 @@ class TrtEdgeLlmHybridEngine:
                                 )
                     else:
                         synth_tid = sum(ord(c) * (i + 1) for i, c in enumerate(content)) % 32000
-                        w, sel, ent, slp = self._step_local_rust_moe(synth_tid, [synth_tid], [-0.15])
+                        w, sel, ent, slp = self._step_local_rust_moe(synth_tid, [synth_tid], [-0.15], token_piece=cleaned_piece)
                         last_weights, last_experts = w, sel
                         entropy_sum += ent
                         chunk_steps += 1
@@ -710,6 +740,9 @@ class TrtEdgeLlmHybridEngine:
         recent_tool_sigs = set()
         last_meta: Dict[str, Any] = {}
 
+        if self.expert_pool is not None and hasattr(self.expert_pool, "begin_eligibility_episode"):
+            self.expert_pool.begin_eligibility_episode()
+
         while True:
             seg_text, seg_tokens, ttft_ms, intercepted_tool, meta = self._stream_single_completion(
                 messages, session_logger=session_logger
@@ -719,6 +752,13 @@ class TrtEdgeLlmHybridEngine:
 
             if intercepted_tool is not None:
                 act, tool_output, clean_prefix = intercepted_tool
+                if self.expert_pool is not None and hasattr(self.expert_pool, "settle_eligibility_trace"):
+                    if "EXIT_CODE: 0" in str(tool_output):
+                        settle_tag = self.expert_pool.settle_eligibility_trace(sandbox_passed=True)
+                        print(f"\n🧬 \033[1;32m[Eligibility Trace -> {settle_tag}]\033[0m 沙盒驗證通過，短期赫布跡象已固化為長期突觸記憶！")
+                    elif "EXIT_CODE:" in str(tool_output):
+                        settle_tag = self.expert_pool.settle_eligibility_trace(sandbox_passed=False)
+                        print(f"\n🛡️ \033[1;33m[Eligibility Trace -> {settle_tag}]\033[0m 攔截沙盒失敗路徑，已執行反赫布回滾以保護長期突觸快照！")
                 sig = f"{act}:{tool_output[:40]}"
                 if sig in recent_tool_sigs:
                     print(f"\n🛑 \033[1;31m[Anti-Drift Breaker]\033[0m Duplicate tool call ({act}) blocked.")
