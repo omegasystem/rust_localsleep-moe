@@ -1218,7 +1218,7 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         model_id = self.inp_model.text().strip()
         self.system_prompt = prof.get(
             "system_prompt",
-            "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。",
+            "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n【檔案覆蓋與局部修補鐵律】：如果有 draft 存在且已經上一輪存檔確認後須實驗，直接使用 run_sandbox_shell 執行 cp/mv 蓋掉目標檔案進入編譯；且如有 Bug 請使用 edit_file 功能（搭配 read_file 的 offset/limit 或 start_line/end_line 工具確認病灶後）進行局部編輯修改，嚴禁整個檔案再寫一遍，否則容易出錯或遺漏既有方法！",
         )
 
         selected_cube = str(self.cmb_core_engine.currentData() or "") if hasattr(self, "cmb_core_engine") else ""
