@@ -45,16 +45,49 @@ class DynamicLoRAExpertPool(nn.Module):
                     self._ltm_baseline_a[k] = self.lora_a[k].data.detach().clone()
                     self.eligibility_trace_a[k] = torch.zeros_like(self.lora_a[k].data)
 
-    def accumulate_eligibility_trace(self, exp_key: str, pre_step_a: torch.Tensor, decay: float = 0.992):
+    @staticmethod
+    def apply_incoherent_hadamard_dispersion(la: torch.Tensor, mix: float = 0.06) -> None:
         """
-        Records single-step Wake Hebbian LTP change ΔA_t into the decaying eligibility trace e_t.
+        [In-Place Fast Walsh-Hadamard Orthonormal Quad Dispersion (FWHT)]
+        Blends a 4x4 orthonormal Walsh-Hadamard transform (H_4^T H_4 = I_4) across each
+        4-element quad prior to Triton 2:4 Fisher pruning. Prevents localized channel polarization
+        and 4-hot-channel quad collisions while preserving Frobenius norm and eRank.
+        """
+        with torch.no_grad():
+            if la.ndim != 2 or (la.shape[1] % 4) != 0:
+                return
+            r, c = la.shape
+            quads = la.float().view(r, c // 4, 4)
+            x0, x1, x2, x3 = quads[..., 0], quads[..., 1], quads[..., 2], quads[..., 3]
+            h0 = 0.5 * (x0 + x1 + x2 + x3)
+            h1 = 0.5 * (x0 - x1 + x2 - x3)
+            h2 = 0.5 * (x0 + x1 - x2 - x3)
+            h3 = 0.5 * (x0 - x1 - x2 + x3)
+            had = torch.stack([h0, h1, h2, h3], dim=-1)
+            blended = ((1.0 - mix) * quads + mix * had).reshape(r, c)
+            la.copy_(blended.to(la.dtype))
+
+    def accumulate_eligibility_trace(
+        self,
+        exp_key: str,
+        pre_step_a: torch.Tensor,
+        decay: float = 0.9985,
+        is_syntax_boundary: bool = False,
+        gamma_syntax: float = 0.935,
+    ):
+        """
+        [Hybrid Dual-Scale Eligibility Trace Decay]
+          E_i(t) = (γ_token * γ_syntax^I(is_boundary)) * E_i(t-1) + ΔA_t
+          - γ_token  = 0.9985 (eliminates token-length verbosity bias within a single statement)
+          - γ_syntax = 0.9350 (step-decays on \\n, }, ; boundaries; half-life ~10 statements)
         """
         with torch.no_grad():
             if exp_key in self.lora_a:
                 if exp_key not in self.eligibility_trace_a:
                     self.eligibility_trace_a[exp_key] = torch.zeros_like(self.lora_a[exp_key].data)
+                eff_decay = float(decay) * (float(gamma_syntax) if is_syntax_boundary else 1.0)
                 delta = self.lora_a[exp_key].data - pre_step_a
-                self.eligibility_trace_a[exp_key].mul_(decay).add_(delta)
+                self.eligibility_trace_a[exp_key].mul_(eff_decay).add_(delta)
 
     def settle_eligibility_trace(self, sandbox_passed: bool | None = None) -> str:
         """
@@ -102,6 +135,7 @@ class DynamicLoRAExpertPool(nn.Module):
                     if trace_energy > 1e-6:
                         try:
                             from triton_localsleep_kernels import launch_triton_fisher_24_prune
+                            self.apply_incoherent_hadamard_dispersion(la, mix=0.06)
                             launch_triton_fisher_24_prune(la, shy_lambda=0.08, survival_floor=0.985)
                         except Exception:
                             pass

@@ -294,6 +294,8 @@ class TrtEdgeLlmHybridEngine:
         self._step_counter_for_push: int = 0
         self.total_nrem_sleep_events = 0
         self.total_gpu_24_prunes = 0
+        self.total_bifurcation_flips = 0
+        self._turn_bifurcation_flips = 0
 
     def push_live_vram_gate_async(self, enabled: Optional[bool] = None, alpha: Optional[float] = None) -> None:
         """Non-blocking background push of 16-LoRA biases into Thor's C++ in-VRAM mailbox (/v1/moe/live_gate)."""
@@ -359,6 +361,22 @@ class TrtEdgeLlmHybridEngine:
             weights, selected_exp, entropy = self.rust_router.forward(synth, 1)
 
         is_boundary = FallbackFatigueRouter.is_syntax_boundary_token(token_piece) if token_piece else True
+
+        # [Saddle-Node Bifurcation Flip Counter: argmax(z + g) != argmax(z)]
+        # Tracks when the 16-LoRA live_gate bias actively flips the Greedy argmax trajectory at a critical decision fork!
+        if len(top_token_ids) >= 2 and len(top_logprobs) >= 2 and self.dynamic_logit_bias:
+            raw_best_tid = int(top_token_ids[0])
+            best_biased_tid = raw_best_tid
+            best_biased_score = float(top_logprobs[0]) + float(self.dynamic_logit_bias.get(str(raw_best_tid), 0.0))
+            for c_tid, c_lp in zip(top_token_ids[:4], top_logprobs[:4]):
+                b_score = float(c_lp) + float(self.dynamic_logit_bias.get(str(int(c_tid)), 0.0))
+                if b_score > best_biased_score + 1e-6:
+                    best_biased_score = b_score
+                    best_biased_tid = int(c_tid)
+            if best_biased_tid != raw_best_tid:
+                self.total_bifurcation_flips += 1
+                self._turn_bifurcation_flips += 1
+
         try:
             res_decay = self.rust_router.step_decay(is_syntax_boundary=is_boundary)
         except TypeError:
@@ -373,6 +391,8 @@ class TrtEdgeLlmHybridEngine:
                     exp_key = f"exp_{exp_id}"
                     if exp_key in self.expert_pool.lora_a:
                         la = self.expert_pool.lora_a[exp_key].data
+                        if hasattr(self.expert_pool, "apply_incoherent_hadamard_dispersion"):
+                            self.expert_pool.apply_incoherent_hadamard_dispersion(la, mix=0.06)
                         # Clean Triton JIT 2:4 Fisher Downscaler (Zero .so lock, Zero underflow!)
                         launch_triton_fisher_24_prune(la, shy_lambda=self.shy_lambda, survival_floor=0.985)
                         self.total_gpu_24_prunes += 1
@@ -408,11 +428,12 @@ class TrtEdgeLlmHybridEngine:
                             cur_norm = unpin_target
 
                         nz_mask = (la != 0)
-                        col_focus = (token_id * (k_rank + 3) + int(eid) * 19) % self.hidden_dim
-                        span = min(256, self.hidden_dim - col_focus)
-                        # Localized channel LTP
+                        # Incoherent Quad-Dispersed Channel LTP:
+                        # Updates 1 channel per 16 columns across the ENTIRE 5376 spectrum (including columns 0..31),
+                        # preventing 4-hot-channel 2:4 collisions and eliminating dark preview slices in Snapshot Studio!
+                        quad_offset = (token_id * (k_rank + 3) + int(eid) * 19) % 16
                         hebb_gain = 1.0 + 0.018 * float(rw) * max(0.3, float(entropy)) / (k_rank + 1.0)
-                        la[:, col_focus : col_focus + span] *= hebb_gain
+                        la[:, quad_offset::16] *= hebb_gain
 
                         # Smooth Ornstein-Uhlenbeck Homeostatic Spring toward μ0 = 1.25 + active LTP boost
                         target_mu = 1.25
@@ -421,12 +442,19 @@ class TrtEdgeLlmHybridEngine:
                         global_gain = max(0.97, min(1.04, 1.0 + spring_pull + wake_ltp))
                         la.mul_(1.0 + (global_gain - 1.0) * nz_mask.to(la.dtype))
 
+                        # Crest-Factor Outlier Guard: prevents any single runaway pixel from blinding Snapshot Studio
+                        rms_val = float(torch.sqrt(torch.mean(la.float() ** 2) + 1e-8).item())
+                        crest_cap = max(0.05, 3.2 * rms_val)
+                        la.clamp_(min=-crest_cap, max=crest_cap)
+
                         new_norm = float(torch.norm(la.float()).item())
                         if new_norm > 2.80:
                             la.mul_(2.80 / new_norm)
 
                         if hasattr(self.expert_pool, "accumulate_eligibility_trace"):
-                            self.expert_pool.accumulate_eligibility_trace(exp_key, pre_step_a)
+                            self.expert_pool.accumulate_eligibility_trace(
+                                exp_key, pre_step_a, is_syntax_boundary=is_boundary
+                            )
 
                 # Closed-Loop Synaptic Logit Projection directly from active 2:4 sparse LoRA_A synapses!
                 # (Fixes standard LoRA zero-initialized B matrix causing delta_norm == 0.0 and skipping mid-stream pushes!)
@@ -631,6 +659,8 @@ class TrtEdgeLlmHybridEngine:
             "nrem_triggered": nrem_triggered_in_pass,
             "total_nrem_events": self.total_nrem_sleep_events,
             "total_gpu_24_prunes": self.total_gpu_24_prunes,
+            "bifurcation_flips": self._turn_bifurcation_flips,
+            "total_bifurcation_flips": self.total_bifurcation_flips,
         }
         return accumulated_text, completion_tokens, ttft_ms, intercepted_tool, routing_meta
 
@@ -714,6 +744,8 @@ class TrtEdgeLlmHybridEngine:
             "nrem_triggered": nrem_triggered_in_pass,
             "total_nrem_events": self.total_nrem_sleep_events,
             "total_gpu_24_prunes": self.total_gpu_24_prunes,
+            "bifurcation_flips": self._turn_bifurcation_flips,
+            "total_bifurcation_flips": self.total_bifurcation_flips,
         }
         return full_content, completion_tokens, ttft_ms, intercepted_tool, routing_meta
 
@@ -747,6 +779,7 @@ class TrtEdgeLlmHybridEngine:
 
         if self.expert_pool is not None and hasattr(self.expert_pool, "begin_eligibility_episode"):
             self.expert_pool.begin_eligibility_episode()
+        self._turn_bifurcation_flips = 0
 
         while True:
             seg_text, seg_tokens, ttft_ms, intercepted_tool, meta = self._stream_single_completion(
@@ -840,7 +873,8 @@ class TrtEdgeLlmHybridEngine:
             f"🏁 \033[1;32m[Hybrid Turn Complete]\033[0m "
             f"Tokens: {total_tokens} | Elapsed: {t_elapsed:.2f}s ({tps:.2f} tps) | "
             f"TTFT: {last_meta.get('ttft_ms', 0.0):.1f}ms | "
-            f"Top-{self.top_k}: {last_meta.get('last_experts')} (H={last_meta.get('mean_entropy', 0.0):.3f})"
+            f"Top-{self.top_k}: {last_meta.get('last_experts')} (H={last_meta.get('mean_entropy', 0.0):.3f}) | "
+            f"Bifurcation Flips: {self._turn_bifurcation_flips}"
         )
         print(f"🦀 \033[1;36m[Rust MoE Telemetry (E0..E3)]:\033[0m {exp_summary}")
         print("-" * 78)
@@ -866,7 +900,8 @@ class TrtEdgeLlmHybridEngine:
         summary_banner_str = (
             f"🏁 [Hybrid Turn Complete] Tokens: {total_tokens} | Elapsed: {t_elapsed:.2f}s ({tps:.2f} tps) | "
             f"TTFT: {last_meta.get('ttft_ms', 0.0):.1f}ms | "
-            f"Top-{self.top_k}: {last_meta.get('last_experts')} (H={last_meta.get('mean_entropy', 0.0):.3f})"
+            f"Top-{self.top_k}: {last_meta.get('last_experts')} (H={last_meta.get('mean_entropy', 0.0):.3f}) | "
+            f"Bifurcation Flips: {self._turn_bifurcation_flips}"
         )
         moe_telemetry_str = f"🦀 [Rust MoE Telemetry (E0..E3)]: {exp_summary}"
 
@@ -885,6 +920,8 @@ class TrtEdgeLlmHybridEngine:
                     "backend": getattr(self, "backend_name", "trt-edgellm-hybrid"),
                     "nrem_events": self.total_nrem_sleep_events,
                     "gpu_24_prunes": self.total_gpu_24_prunes,
+                    "bifurcation_flips": self._turn_bifurcation_flips,
+                    "total_bifurcation_flips": self.total_bifurcation_flips,
                     "summary_banner": summary_banner_str,
                     "moe_telemetry": moe_telemetry_str,
                     "moe_telemetry_full": " | ".join(all_exps_formatted),

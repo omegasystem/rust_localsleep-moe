@@ -208,6 +208,7 @@ class StreamInferenceWorker(QThread):
 
             if self.engine.expert_pool is not None and hasattr(self.engine.expert_pool, "begin_eligibility_episode"):
                 self.engine.expert_pool.begin_eligibility_episode()
+            self.engine._turn_bifurcation_flips = 0
 
             while True:
                 remaining_budget = max(16, self.engine.max_tokens - completion_tokens)
@@ -430,6 +431,8 @@ class StreamInferenceWorker(QThread):
                     "backend": "pyqt6-gui-hybrid",
                     "nrem_events": self.engine.total_nrem_sleep_events,
                     "gpu_24_prunes": self.engine.total_gpu_24_prunes,
+                    "bifurcation_flips": getattr(self.engine, "_turn_bifurcation_flips", 0),
+                    "total_bifurcation_flips": getattr(self.engine, "total_bifurcation_flips", 0),
                 },
                 artifacts=saved_arts,
             )
