@@ -362,18 +362,31 @@ class TrtEdgeLlmHybridEngine:
 
         is_boundary = FallbackFatigueRouter.is_syntax_boundary_token(token_piece) if token_piece else True
 
-        # [Saddle-Node Bifurcation Flip Counter: argmax(z + g) != argmax(z)]
-        # Tracks when the 16-LoRA live_gate bias actively flips the Greedy argmax trajectory at a critical decision fork!
+        # [Saddle-Node Bifurcation Flip Counter: argmax(z_raw) != argmax(z_tilde)]
+        # Thor C++ applies gLiveGateBiases BEFORE returning SSE top_logprobs (z_tilde = z_raw + g).
+        # To detect a true trajectory flip, we SUBTRACT active bias g to reconstruct z_raw = z_tilde - g!
+        if len(top_token_ids) >= 1 and int(top_token_ids[0]) <= 0 and int(token_id) > 0:
+            top_token_ids = [int(token_id)] + list(top_token_ids[1:])
         if len(top_token_ids) >= 2 and len(top_logprobs) >= 2 and self.dynamic_logit_bias:
-            raw_best_tid = int(top_token_ids[0])
-            best_biased_tid = raw_best_tid
-            best_biased_score = float(top_logprobs[0]) + float(self.dynamic_logit_bias.get(str(raw_best_tid), 0.0))
-            for c_tid, c_lp in zip(top_token_ids[:4], top_logprobs[:4]):
-                b_score = float(c_lp) + float(self.dynamic_logit_bias.get(str(int(c_tid)), 0.0))
-                if b_score > best_biased_score + 1e-6:
-                    best_biased_score = b_score
-                    best_biased_tid = int(c_tid)
-            if best_biased_tid != raw_best_tid:
+            post_winner_tid = int(top_token_ids[0]) if int(top_token_ids[0]) > 0 else int(token_id)
+            winner_bias = float(self.dynamic_logit_bias.get(str(post_winner_tid), 0.0))
+            raw_best_tid = post_winner_tid
+            raw_best_score = float(top_logprobs[0]) - winner_bias
+            flipped = False
+            for idx_c, (c_tid, c_lp) in enumerate(zip(top_token_ids[:4], top_logprobs[:4])):
+                eff_tid = post_winner_tid if idx_c == 0 else int(c_tid)
+                c_bias = float(self.dynamic_logit_bias.get(str(eff_tid), 0.0)) if eff_tid > 0 else 0.0
+                # Reconstruct pre-bias raw logit by SUBTRACTING active live_gate bias: z_raw = z_tilde - g
+                raw_score = float(c_lp) - c_bias
+                if idx_c > 0 and raw_score > raw_best_score + 1e-6:
+                    raw_best_score = raw_score
+                    raw_best_tid = eff_tid if eff_tid > 0 else -idx_c
+                    flipped = True
+            # Also catch saddle-point margin flips when runner-up bias pushed it down
+            margin_12 = abs(float(top_logprobs[0]) - float(top_logprobs[1]))
+            if not flipped and abs(winner_bias) > 0.05 and margin_12 < abs(winner_bias):
+                flipped = True
+            if flipped or raw_best_tid != post_winner_tid:
                 self.total_bifurcation_flips += 1
                 self._turn_bifurcation_flips += 1
 
