@@ -201,8 +201,9 @@ class StreamInferenceWorker(QThread):
             last_experts: List[int] = [0, 1]
             entropy_sum = 0.0
             tool_calls_count = 0
-            MAX_TOOL_CALLS = 5
-            recent_tool_sigs = set()
+            MAX_TOOL_CALLS = int(getattr(self.engine, "max_tool_calls", 100) or 100)
+            consecutive_same_sig = 0
+            last_tool_sig = ""
             micro_chunk_limit = int(getattr(self.engine, "micro_chunk_tokens", 0) or 0)
             micro_slice_count = 0
 
@@ -332,17 +333,21 @@ class StreamInferenceWorker(QThread):
 
                 if intercepted_tool is not None:
                     act, tool_output, clean_prefix = intercepted_tool
-                    sig = f"{act}:{len(tool_output)}:{tool_output[-120:]}"
-                    if sig in recent_tool_sigs or tool_calls_count >= MAX_TOOL_CALLS:
-                        break
-                    recent_tool_sigs.add(sig)
-                    tool_calls_count += 1
-
-                    # Extract the actual tool_call JSON block from seg_text so assistant history remains 100% authentic!
                     tc_idx = seg_text.find("<tool_call>")
                     raw_tc_block = seg_text[tc_idx:] if tc_idx != -1 else f"<tool_call>{json.dumps({'action': act}, ensure_ascii=False)}</tool_call>"
                     if not raw_tc_block.endswith(">"):
                         raw_tc_block += ">"
+
+                    sig = f"{act}:{raw_tc_block}:{len(tool_output)}:{tool_output[-120:]}"
+                    if sig == last_tool_sig:
+                        consecutive_same_sig += 1
+                    else:
+                        consecutive_same_sig = 1
+                        last_tool_sig = sig
+
+                    if consecutive_same_sig >= 3 or tool_calls_count >= MAX_TOOL_CALLS:
+                        break
+                    tool_calls_count += 1
 
                     if len(tool_output) > 1800:
                         total_lines_out = tool_output.count("\n")
@@ -1216,10 +1221,7 @@ class LocalSleepMoETacticalWindow(QMainWindow):
 
         server_url = self.inp_url.text().strip()
         model_id = self.inp_model.text().strip()
-        self.system_prompt = prof.get(
-            "system_prompt",
-            "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n【檔案覆蓋與局部修補鐵律】：如果有 draft 存在且已經上一輪存檔確認後須實驗，直接使用 run_sandbox_shell 執行 cp/mv 蓋掉目標檔案進入編譯；且如有 Bug 請使用 edit_file 功能（搭配 read_file 的 offset/limit 或 start_line/end_line 工具確認病灶後）進行局部編輯修改，嚴禁整個檔案再寫一遍，否則容易出錯或遺漏既有方法！",
-        )
+        self.system_prompt = prof.get("system_prompt","你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n【檔案覆蓋與局部修補鐵律】：如果有 draft 存在且已經上一輪存檔確認後須實驗，直接使用 run_sandbox_shell 執行 cp/mv 蓋掉目標檔案進入編譯；且如有 Bug 請使用 edit_file 功能（搭配 read_file 的 offset/limit 或 start_line/end_line 工具確認病灶後）進行局部編輯修改，嚴禁整個檔案再寫一遍，否則容易出錯或遺漏既有方法！\n5. 【Cargo.toml 擴充授權與版本護欄】：允許隨時使用 edit_file 修改沙盒內的 Cargo.toml 新增純 Rust 依賴庫（目前已預載 rand='0.8', rayon='1.8', parking_lot='0.12', smallvec='1.13', rustc-hash='1.1', serde='1.0'）；但必須保持 pyo3='0.20'、numpy='0.20'、ndarray='0.15' 三件套版本配對，且嚴禁引入需外部 C/Fortran BLAS 的 ndarray-linalg / openblas-src！" )
 
         selected_cube = str(self.cmb_core_engine.currentData() or "") if hasattr(self, "cmb_core_engine") else ""
         device = "cuda" if torch.cuda.is_available() else "cpu"

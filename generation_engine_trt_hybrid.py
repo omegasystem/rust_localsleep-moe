@@ -283,6 +283,7 @@ class TrtEdgeLlmHybridEngine:
         hyper = profile_config.get("hyperparameters", {})
         self.max_context_tokens = int(getattr(args, "max_context_tokens", None) or hyper.get("max_context_tokens", 32768))
         self.max_tokens = int(getattr(args, "max_tokens", None) or hyper.get("max_generation_tokens", 4096))
+        self.max_tool_calls = int(getattr(args, "max_tool_calls", None) or hyper.get("max_tool_calls", 100))
         self.temperature = float(getattr(args, "temp", None) or hyper.get("temperature", 0.6))
         self.top_p = float(getattr(args, "top_p", None) or hyper.get("top_p", 0.9))
         self.stop_tokens = list(profile_config.get("stop_tokens", list()))
@@ -786,8 +787,9 @@ class TrtEdgeLlmHybridEngine:
         total_tokens = 0
         full_turn_text = ""
         tool_calls_count = 0
-        MAX_TOOL_CALLS = 3
-        recent_tool_sigs = set()
+        MAX_TOOL_CALLS = int(getattr(self, "max_tool_calls", 100) or 100)
+        consecutive_same_sig = 0
+        last_tool_sig = ""
         last_meta: Dict[str, Any] = {}
 
         if self.expert_pool is not None and hasattr(self.expert_pool, "begin_eligibility_episode"):
@@ -810,12 +812,16 @@ class TrtEdgeLlmHybridEngine:
                     elif "EXIT_CODE:" in str(tool_output):
                         settle_tag = self.expert_pool.settle_eligibility_trace(sandbox_passed=False)
                         print(f"\n🛡️ \033[1;33m[Eligibility Trace -> {settle_tag}]\033[0m 攔截沙盒失敗路徑，已執行反赫布回滾以保護長期突觸快照！")
-                sig = f"{act}:{tool_output[:40]}"
-                if sig in recent_tool_sigs:
-                    print(f"\n🛑 \033[1;31m[Anti-Drift Breaker]\033[0m Duplicate tool call ({act}) blocked.")
+                sig = f"{act}:{clean_prefix[-80:]}:{tool_output[:80]}"
+                if sig == last_tool_sig:
+                    consecutive_same_sig += 1
+                else:
+                    consecutive_same_sig = 1
+                    last_tool_sig = sig
+                if consecutive_same_sig >= 3:
+                    print(f"\n🛑 \033[1;31m[Anti-Drift Breaker]\033[0m 3x consecutive identical tool call ({act}) blocked.")
                     full_turn_text += clean_prefix
                     break
-                recent_tool_sigs.add(sig)
                 tool_calls_count += 1
 
                 print(f"\n\n📥 \033[1;32m[Host Tool Dispatched (#{tool_calls_count}) - {act}]:\033[0m\n{tool_output}\n")

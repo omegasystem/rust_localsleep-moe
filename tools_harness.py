@@ -374,20 +374,44 @@ class EmbodiedToolHarness:
                 else:
                     cmd_str = f"python3 {sp} {args}".strip()
 
-            # Smart Sandbox Prefix De-duplication:
-            # Since `target_cwd` is ALREADY `isolated_output/<prj_uuid>`, if the model passes
-            # `python3 isolated_output/<prj_uuid>/mock_evaluator.py`, automatically strip the redundant prefix!
-            rel_cwd_prefix = os.path.relpath(target_cwd, self.workspace_root).replace("\\", "/")
-            if rel_cwd_prefix and rel_cwd_prefix != ".":
-                cmd_str = cmd_str.replace(rel_cwd_prefix + "/", "").replace("./" + rel_cwd_prefix + "/", "")
-            cmd_str = re.sub(r"(?:\./)?isolated_output/prj_[A-Za-z0-9_]+/", "", cmd_str)
+            # If the command explicitly starts with `cd isolated_output/prj_<id>` and that dir exists,
+            # switch `target_cwd` to that `prj_<id>` before stripping the redundant `cd`!
+            m_cd = re.search(r"\bcd\s+['\"]?(?:\./)?isolated_output/(prj_[A-Za-z0-9_]+)/?['\"]?", cmd_str)
+            if m_cd:
+                cand_prj = os.path.abspath(os.path.join(iso_root, m_cd.group(1)))
+                if cand_prj.startswith(iso_root) and os.path.isdir(cand_prj):
+                    target_cwd = cand_prj
+
+            # Also if running `cargo` / `maturin` and `target_cwd` has no Cargo.toml, auto-bind to the sandbox project that has Cargo.toml
+            if re.search(r"\b(?:cargo|maturin)\b", cmd_str) and not os.path.exists(os.path.join(target_cwd, "Cargo.toml")):
+                cand_cargos = sorted(glob.glob(os.path.join(iso_root, "prj_*", "Cargo.toml")), key=os.path.getmtime, reverse=True)
+                if cand_cargos:
+                    target_cwd = os.path.dirname(cand_cargos[0])
+
+            # Smart Sandbox Prefix Handling (supports BOTH same-project stripping AND cross-project `../prj_xxx` copying!):
+            cmd_str = re.sub(
+                r"\bcd\s+['\"]?(?:\./)?isolated_output/prj_[A-Za-z0-9_]+/?['\"]?\s*(?:&&|;)?\s*",
+                "",
+                cmd_str,
+            ).strip()
+            cur_prj_name = os.path.basename(target_cwd)
+
+            def _rewrite_prj_path(match: re.Match) -> str:
+                prj_id = match.group(1)
+                trailing_slash = match.group(2) or ""
+                if prj_id == cur_prj_name:
+                    return "" if trailing_slash else "."
+                # Cross-project access inside isolated_output -> rewrite to `../<prj_id>`
+                return f"../{prj_id}{trailing_slash}"
+
+            cmd_str = re.sub(r"(?:\./)?isolated_output/(prj_[A-Za-z0-9_]+)(/?)", _rewrite_prj_path, cmd_str)
+            cmd_str = re.sub(r"(?:\./)?isolated_output/", "../", cmd_str)
 
             if not cmd_str:
                 return "[Error: Empty command. Provide 'command' (e.g., 'python3 mock_evaluator.py' or 'cargo build --release') or 'script_path'.]"
 
-            # Security Gate 1: Block path traversal & dangerous tokens
+            # Security Gate 1: Block dangerous system tokens (NOTE: `../` is permitted within workspace_root/isolated_output and checked below!)
             forbidden_patterns = [
-                r"\.\./",
                 r"\bsudo\b",
                 r"\brm\s+-[rRfF]+",
                 r"\bssh\b",
@@ -415,6 +439,7 @@ class EmbodiedToolHarness:
                 "python", "python3", "pytest",
                 "bash", "sh",
                 "cargo", "rustc", "maturin",
+                "cd", "cp", "mv", "diff", "mkdir", "touch", "rm", "sed", "awk", "find", "true",
                 "ls", "pwd", "cat", "head", "tail", "wc", "grep", "echo", "env",
             }
             sub_cmds = [s.strip() for s in re.split(r"&&|;|\|\|", cmd_str) if s.strip()]
@@ -426,38 +451,39 @@ class EmbodiedToolHarness:
                 idx = 0
                 while idx < len(tokens) and "=" in tokens[idx] and not tokens[idx].startswith("-"):
                     idx += 1
-                if idx >= len(tokens):
+                if idx >= len(tokens) and tokens:
                     continue
                 prog = tokens[idx]
                 prog_base = os.path.basename(prog)
 
                 # Allow `./script.sh` or `./binary` inside sandbox
-                if prog.startswith("./"):
-                    resolved_prog = os.path.abspath(os.path.join(target_cwd, prog[2:]))
-                    if not resolved_prog.startswith(iso_root):
-                        return f"[Sandbox Security Blocked: '{prog}' escapes isolated sandbox directory.]"
+                if prog.startswith("./") or prog.startswith("../"):
+                    resolved_prog = os.path.abspath(os.path.join(target_cwd, prog))
+                    if not resolved_prog.startswith(self.workspace_root):
+                        return f"[Sandbox Security Blocked: '{prog}' escapes workspace root directory.]"
                 elif prog_base not in allowed_bins:
                     return (
                         f"[Sandbox Security Blocked: Executable '{prog}' is not permitted. "
                         f"Allowed in isolated sandbox: {sorted(allowed_bins)} or './<sandbox_script>']"
                     )
 
-                # Verify any explicit file path arguments stay within isolated_output (no absolute /etc, /home/... outside sandbox)
+                # Verify any explicit path arguments (relative `..` or absolute `/...`) stay within workspace_root
                 for arg_tok in tokens[idx + 1 :]:
                     if arg_tok.startswith("-"):
                         continue
-                    if arg_tok.startswith("/"):
-                        abs_arg = os.path.abspath(arg_tok)
-                        if not abs_arg.startswith(iso_root):
+                    if ".." in arg_tok or arg_tok.startswith("/"):
+                        abs_arg = os.path.abspath(arg_tok) if arg_tok.startswith("/") else os.path.abspath(os.path.join(target_cwd, arg_tok))
+                        if not abs_arg.startswith(self.workspace_root):
                             return (
-                                f"[Sandbox Security Blocked: Absolute path '{arg_tok}' is outside isolated_output sandbox ({iso_root}). "
-                                f"Use relative paths inside the sandbox.]"
+                                f"[Sandbox Security Blocked: Path '{arg_tok}' escapes workspace root ({self.workspace_root}). "
+                                f"Only cross-project paths inside isolated_output or parent workspace are allowed.]"
                             )
 
             safe_timeout = min(max(3, int(timeout or 45)), 120)
             env = os.environ.copy()
             env["PYTHONPATH"] = f"{target_cwd}:{env.get('PYTHONPATH', '')}".rstrip(":")
             env["PYTHONDONTWRITEBYTECODE"] = "1"
+            env["PYO3_USE_ABI3_FORWARD_COMPATIBILITY"] = "1"
 
             proc = subprocess.run(
                 cmd_str,
