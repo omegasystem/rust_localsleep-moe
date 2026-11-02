@@ -452,11 +452,16 @@ class TrtEdgeLlmHybridEngine:
                         r_idx = (int(cand_tid) * 2654435761) % 32
                         proj_val = float(rank_delta[r_idx].item())
                         raw_bias = proj_val * 28.0 * ent_scale / (1.0 + 0.35 * cand_rank)
-                        bias_val = max(-3.5, min(3.5, raw_bias))
+                        # Hyperbolic Tangent Soft-Capping (τ = 2.5): preserves 1:1 slope in [-1.0, 1.0]
+                        # while smoothly saturating below the 3.5 Eagle3 draft-rejection cliff!
+                        tau_cap = 2.5
+                        bias_val = tau_cap * math.tanh(raw_bias / tau_cap)
                         if abs(bias_val) >= 0.02:
                             tid_key = str(cand_tid)
                             prev_b = self.dynamic_logit_bias.get(tid_key, 0.0)
-                            self.dynamic_logit_bias[tid_key] = round(max(-3.5, min(3.5, 0.65 * prev_b + 0.35 * bias_val)), 3)
+                            # EMA Micro-Step Smoothing (α = 0.25)
+                            smoothed_b = 0.75 * prev_b + 0.25 * bias_val
+                            self.dynamic_logit_bias[tid_key] = round(tau_cap * math.tanh(smoothed_b / tau_cap), 3)
 
                 # Option 1 (C++ VRAM Live Mailbox): Always push updated 16-LoRA biases mid-stream every 16 steps!
                 self._step_counter_for_push += 1

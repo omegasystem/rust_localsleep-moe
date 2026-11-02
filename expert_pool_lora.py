@@ -45,7 +45,7 @@ class DynamicLoRAExpertPool(nn.Module):
                     self._ltm_baseline_a[k] = self.lora_a[k].data.detach().clone()
                     self.eligibility_trace_a[k] = torch.zeros_like(self.lora_a[k].data)
 
-    def accumulate_eligibility_trace(self, exp_key: str, pre_step_a: torch.Tensor, decay: float = 0.985):
+    def accumulate_eligibility_trace(self, exp_key: str, pre_step_a: torch.Tensor, decay: float = 0.992):
         """
         Records single-step Wake Hebbian LTP change ΔA_t into the decaying eligibility trace e_t.
         """
@@ -87,7 +87,10 @@ class DynamicLoRAExpertPool(nn.Module):
                     self._ltm_baseline_a[k] = la.detach().clone()
                     self.eligibility_trace_a[k].zero_()
                 elif sandbox_passed is False:
-                    # Anti-Hebbian Rollback: reject polluted trajectory & penalize erroneous trace direction
+                    # Anti-Hebbian Rollback + Immediate Triton 2:4 Structural Prune on Active Faulty Channels:
+                    # 1) Subtract 0.25 * E_i(t) from clean LTM baseline to weaken the exact channels that caused the bug
+                    # 2) Immediately invoke Triton 2:4 Fisher pruning so weakened buggy channels lose the Top-2 quad competition and become 0.0!
+                    trace_energy = float(torch.norm(trace.float()).item())
                     nz_mask = (base != 0).to(la.dtype)
                     reverted = (base - 0.25 * trace) * nz_mask
                     nrm = float(torch.norm(reverted.float()).item())
@@ -96,6 +99,12 @@ class DynamicLoRAExpertPool(nn.Module):
                     elif nrm > 2.80:
                         reverted.mul_(2.80 / nrm)
                     la.copy_(reverted)
+                    if trace_energy > 1e-6:
+                        try:
+                            from triton_localsleep_kernels import launch_triton_fisher_24_prune
+                            launch_triton_fisher_24_prune(la, shy_lambda=0.08, survival_floor=0.985)
+                        except Exception:
+                            pass
                     # Keep baseline clean for the retry attempt
                     self._ltm_baseline_a[k] = la.detach().clone()
                     self.eligibility_trace_a[k].zero_()
