@@ -366,3 +366,171 @@
 🏁 [Hybrid Turn Complete] Tokens: 2534 | Elapsed: 168.32s (15.05 tps) | TTFT: 2280.6ms | Top-2: [14, 7, 0, 8, 13] (H=2.090)
 
 ```
+
+### 🔹 Run `2026-11-02 11:45:01` (`thor_31b_20261102_113936` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 4246 | Elapsed: 308.77s (13.75 tps) | TTFT: 1376.4ms | Top-2: [0, 1, 10, 8, 13] (H=2.135)
+
+```
+
+### 🔹 Run `2026-11-02 11:53:42` (`thor_31b_20261102_115054` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2134 | Elapsed: 150.74s (14.16 tps) | TTFT: 323.2ms | Top-2: [14, 7, 0, 1, 8] (H=2.130)
+
+```
+
+### 🔹 Run `2026-11-02 12:05:02` (`thor_31b_20261102_120306` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1383 | Elapsed: 107.29s (12.89 tps) | TTFT: 180.1ms | Top-2: [13, 7, 4, 15, 5] (H=2.138)
+
+```
+
+### 🔹 Run `2026-11-02 12:08:57` (`thor_31b_20261102_120714` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1195 | Elapsed: 92.08s (12.98 tps) | TTFT: 1374.8ms | Top-2: [13, 7, 15, 12, 5] (H=2.132)
+
+```
+
+### 🔹 Run `2026-11-02 22:43:42` (`thor_31b_20261102_224146` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1175 | Elapsed: 112.30s (10.46 tps) | TTFT: 212.9ms | Top-2: [7, 0, 14, 1, 8] (H=2.140)
+
+```
+
+### 🔹 Run `2026-11-02 22:56:21` (`thor_31b_20261102_224146` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1880 | Elapsed: 172.06s (10.93 tps) | TTFT: 1131.6ms | Top-2: [7, 0, 14, 1, 8] (H=2.118)
+
+```
+
+### 🔹 Run `2026-11-02 23:19:02` (`thor_31b_20261102_230116` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 6267 | Elapsed: 584.10s (10.73 tps) | TTFT: 2314.4ms | Top-2: [14, 7, 0, 1, 8] (H=2.141)
+
+```
+
+### 🔹 Run `2026-11-02 23:28:59` (`thor_31b_20261102_232558` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 993 | Elapsed: 106.89s (9.29 tps) | TTFT: 2433.4ms | Top-2: [14, 1, 8, 10, 13] (H=2.182)
+
+```
+
+### 🔹 Run `2026-11-02 23:34:47` (`thor_31b_20261102_233100` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2241 | Elapsed: 214.17s (10.46 tps) | TTFT: 217.9ms | Top-2: [0, 14, 1, 13] (H=2.134)
+
+```
+
+### 🔹 Run `2026-11-02 23:40:22` (`thor_31b_20261102_233100` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1011 | Elapsed: 103.31s (9.79 tps) | TTFT: 4241.2ms | Top-2: [3, 5, 2, 9, 8] (H=2.167)
+
+```
+
+### 🔹 Run `2026-11-02 23:46:56` (`thor_31b_20261102_233100` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1237 | Elapsed: 126.42s (9.78 tps) | TTFT: 1840.3ms | Top-2: [7, 14, 1, 8, 13] (H=2.151)
+
+```
+
+### 🔹 Run `2026-11-03 01:02:15` (`thor_31b_20261103_005351` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2755 | Elapsed: 273.62s (10.07 tps) | TTFT: 2451.5ms | Top-2: [7, 0, 14, 8] (H=2.148)
+
+```
+
+### 🔹 Run `2026-11-03 01:14:20` (`thor_31b_20261103_005351` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 4350 | Elapsed: 418.41s (10.40 tps) | TTFT: 2316.2ms | Top-2: [0, 14, 10, 8] (H=2.154)
+
+```
+
+### 🔹 Run `2026-11-03 01:23:04` (`thor_31b_20261103_005351` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2228 | Elapsed: 200.32s (11.12 tps) | TTFT: 5047.8ms | Top-2: [8, 9] (H=2.136)
+
+```
+
+### 🔹 Run `2026-11-03 01:29:56` (`thor_31b_20261103_005351` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1497 | Elapsed: 166.32s (9.00 tps) | TTFT: 2922.9ms | Top-2: [7, 14, 1, 10] (H=2.143)
+
+```
+
+### 🔹 Run `2026-11-03 20:53:20` (`thor_31b_20261103_205053` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1268 | Elapsed: 140.13s (9.05 tps) | TTFT: 1951.3ms | Top-2: [13, 4, 7, 15, 12] (H=2.133)
+
+```
+
+### 🔹 Run `2026-11-03 20:58:00` (`thor_31b_20261103_205053` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2150 | Elapsed: 247.88s (8.67 tps) | TTFT: 724.3ms | Top-2: [7, 14, 0, 11, 4] (H=2.121)
+
+```
+
+### 🔹 Run `2026-11-03 21:06:02` (`thor_31b_20261103_210516` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 755 | Elapsed: 36.61s (20.62 tps) | TTFT: 228.7ms | Top-2: [14, 7, 0, 8] (H=2.148)
+
+```
+
+### 🔹 Run `2026-11-03 21:07:12` (`thor_31b_20261103_210516` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1187 | Elapsed: 67.80s (17.51 tps) | TTFT: 449.1ms | Top-2: [0, 14, 1, 13] (H=2.125)
+
+```
+
+### 🔹 Run `2026-11-03 21:09:00` (`thor_31b_20261103_210516` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2187 | Elapsed: 99.70s (21.94 tps) | TTFT: 712.9ms | Top-2: [1, 8, 13, 3] (H=2.130)
+
+```
+
+### 🔹 Run `2026-11-03 21:12:11` (`thor_31b_20261103_210516` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3256 | Elapsed: 151.01s (21.56 tps) | TTFT: 1506.3ms | Top-2: [7, 0, 14, 1, 13] (H=2.115)
+
+```
+
+### 🔹 Run `2026-11-03 21:33:13` (`thor_31b_20261103_213142` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1467 | Elapsed: 63.29s (23.18 tps) | TTFT: 2822.0ms | Top-2: [7, 14, 1, 10, 8] (H=2.128)
+
+```
+
+### 🔹 Run `2026-11-03 21:36:06` (`thor_31b_20261103_213142` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2411 | Elapsed: 106.22s (22.70 tps) | TTFT: 1196.3ms | Top-2: [0, 14, 1, 10, 8] (H=2.134)
+
+```
+
+### 🔹 Run `2026-11-04 01:44:13` (`thor_bolt_e4b_20261104_014030` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 4984 | Elapsed: 205.61s (24.24 tps) | TTFT: 382.4ms | Top-2: [13, 4, 15, 5] (H=2.128)
+
+```
+
+### 🔹 Run `2026-11-04 01:47:59` (`thor_bolt_e4b_20261104_014030` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 231 | Elapsed: 10.08s (22.92 tps) | TTFT: 419.9ms | Top-2: [5, 13, 6, 12, 2] (H=2.142)
+
+```
+
+### 🔹 Run `2026-11-04 01:56:57` (`thor_31b_20261104_015616` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 249 | Elapsed: 11.32s (22.01 tps) | TTFT: 1021.1ms | Top-2: [5, 13, 6, 10, 12] (H=2.173)
+
+```
+
+### 🔹 Run `2026-11-04 02:01:30` (`thor_bolt_e4b_20261104_020104` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 290 | Elapsed: 12.10s (23.98 tps) | TTFT: 253.6ms | Top-2: [3, 0, 4] (H=2.170)
+
+```
+
+### 🔹 Run `2026-11-04 02:11:39` (`thor_bolt_e4b_20261104_020829` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 4176 | Elapsed: 176.68s (23.64 tps) | TTFT: 182.0ms | Top-2: [3, 5, 9, 8] (H=2.154)
+
+```

@@ -665,10 +665,139 @@ class EmbodiedToolHarness:
         except Exception as e:
             return f"[AST Check Exception: {e}]"
 
+    @staticmethod
+    def _apply_inline_stream_edits(raw_content: str) -> Tuple[str, List[str]]:
+        """
+        Executes inline stream-edit / backspace directives inside `<file path="...">...</file>`
+        so the model can delete/rewind mistaken lines mid-stream and continue writing cleanly
+        WITHOUT leaving dead code or creating redundant wrapper functions!
+
+        Supported inline directives (understood ONLY by the <file> parser):
+          1. `<edit_drop_lines n="K"/>` or `# @edit_drop_lines: K` or `// @edit_drop_lines: K`
+             -> Deletes the immediately preceding K lines from the output buffer.
+          2. `<edit_rewind_to>anchor_text</edit_rewind_to>` or `# @edit_rewind_to: anchor_text`
+             -> Rewinds (deletes) all lines back to the most recent line containing `anchor_text`.
+                (If the first line after the directive also contains `anchor_text`, replaces the anchor line too;
+                 otherwise keeps the anchor line and replaces everything after it.)
+          3. `<edit_rewind_func/>` or `# @edit_rewind_func`
+             -> Rewinds back to the most recent `def ...:` / `fn ...` function signature line so the model
+                can rewrite the current function body cleanly in-place!
+        """
+        out_lines: List[str] = []
+        edit_logs: List[str] = []
+        raw_lines = raw_content.splitlines()
+        i = 0
+        n_total = len(raw_lines)
+
+        while i < n_total:
+            line = raw_lines[i]
+            stripped = line.strip()
+
+            # 1. Check `<edit_drop_lines n="K"/>` or `# @edit_drop_lines: K`
+            m_drop = re.search(
+                r'(?:<edit_drop_lines\s+(?:n|count)=["\']?(\d+)["\']?\s*/?>|(?:#|//)\s*@edit_drop_lines\s*:\s*(\d+))',
+                stripped,
+            )
+            if m_drop:
+                k_drop = int(m_drop.group(1) or m_drop.group(2) or 1)
+                prefix_before_tag = re.sub(
+                    r'(?:<edit_drop_lines\s+(?:n|count)=["\']?\d+["\']?\s*/?>|(?:#|//)\s*@edit_drop_lines\s*:\s*\d+).*',
+                    "",
+                    line,
+                ).rstrip()
+                # If the tag was placed at the end of a mistaken line, count that line as 1 of the dropped lines
+                if prefix_before_tag.strip():
+                    out_lines.append(prefix_before_tag)
+                actual_dropped = min(len(out_lines), max(1, k_drop))
+                for _ in range(actual_dropped):
+                    out_lines.pop()
+                edit_logs.append(f"drop_lines({actual_dropped})")
+                i += 1
+                continue
+
+            # 2. Check `<edit_rewind_func/>` or `# @edit_rewind_func`
+            if "<edit_rewind_func" in stripped or "@edit_rewind_func" in stripped:
+                rewound = 0
+                while out_lines:
+                    cand = out_lines[-1].lstrip()
+                    if cand.startswith("def ") or cand.startswith("async def ") or cand.startswith("fn ") or cand.startswith("pub fn "):
+                        # Check if next non-empty line in raw_lines re-declares the same `def` / `fn`
+                        next_non_empty = ""
+                        for j in range(i + 1, min(n_total, i + 5)):
+                            if raw_lines[j].strip():
+                                next_non_empty = raw_lines[j].lstrip()
+                                break
+                        if next_non_empty.startswith(("def ", "async def ", "fn ", "pub fn ")):
+                            out_lines.pop()
+                            rewound += 1
+                        break
+                    out_lines.pop()
+                    rewound += 1
+                edit_logs.append(f"rewind_func({rewound} lines)")
+                i += 1
+                continue
+
+            # 3. Check `<edit_rewind_to>anchor</edit_rewind_to>` or `# @edit_rewind_to: anchor`
+            m_rew = re.search(
+                r'(?:<edit_rewind_to>(.*?)</edit_rewind_to>|(?:#|//)\s*@edit_rewind_to\s*:\s*(.+))',
+                stripped,
+            )
+            if m_rew:
+                anchor = (m_rew.group(1) or m_rew.group(2) or "").strip()
+                if anchor:
+                    found_idx = -1
+                    for idx_back in range(len(out_lines) - 1, -1, -1):
+                        if anchor in out_lines[idx_back]:
+                            found_idx = idx_back
+                            break
+                    if found_idx >= 0:
+                        # Check if next non-empty line repeats the anchor
+                        next_ne = ""
+                        for j in range(i + 1, min(n_total, i + 5)):
+                            if raw_lines[j].strip():
+                                next_ne = raw_lines[j].strip()
+                                break
+                        cut_at = found_idx if (anchor in next_ne) else (found_idx + 1)
+                        removed_cnt = len(out_lines) - cut_at
+                        out_lines = out_lines[:cut_at]
+                        edit_logs.append(f"rewind_to('{anchor[:24]}', -{removed_cnt} lines)")
+                i += 1
+                continue
+
+            out_lines.append(line)
+            i += 1
+
+        joined = "\n".join(out_lines)
+
+        # 4. Automatic Dead-Branch & Redundant Helper-Function Collapse:
+        # If the model realized an error mid-function (e.g., `# 這裡邏輯有誤，修正如下` -> `return self._precise_24(w)`)
+        # and immediately defined `def _precise_24(self, w):` right below it, automatically splice the clean helper
+        # body directly into the original function and delete the broken outer loop + redundant helper!
+        auto_splice_pat = re.compile(
+            r"(?P<indent>[ \t]*)def\s+(?P<orig_fn>[a-zA-Z0-9_]+)\s*\((?P<orig_args>[^)]*)\)\s*:\n"
+            r"(?P<bad_body>(?:.*\n)*?[^\n]*(?:邏輯有誤|修正如下|重新實作)[^\n]*\n(?:.*\n)*?)"
+            r"[ \t]*return\s+self\.(?P<helper_fn>_[a-zA-Z0-9_]+)\s*\([^)]*\)\s*\n+"
+            r"(?P=indent)def\s+(?P=helper_fn)\s*\((?P<helper_args>[^)]*)\)\s*:\n"
+            r"(?P<clean_body>(?:(?P=indent)[ \t]+.*\n|\s*\n)+)"
+        )
+        m_sp = auto_splice_pat.search(joined)
+        if m_sp:
+            indent = m_sp.group("indent")
+            orig_fn = m_sp.group("orig_fn")
+            orig_args = m_sp.group("orig_args")
+            helper_fn = m_sp.group("helper_fn")
+            clean_body = m_sp.group("clean_body")
+            spliced = f"{indent}def {orig_fn}({orig_args}):\n{clean_body}"
+            joined = joined[: m_sp.start()] + spliced + joined[m_sp.end() :]
+            edit_logs.append(f"auto_spliced_clean_func('{orig_fn}' <- '{helper_fn}')")
+
+        return joined, edit_logs
+
     def extract_and_save_artifacts(self, text: str) -> List[Dict[str, Any]]:
         """
-        Extracts multi-line native XML artifacts (<file path="...">...</file>)
-        and automatically writes them into isolated_output_dir without escaping or formatting destruction.
+        Extracts multi-line native XML artifacts (<file path="...">...</file>),
+        executes any inline stream-edit/backspace directives (`<edit_drop_lines>`, `<edit_rewind_to>`, `<edit_rewind_func/>`),
+        and automatically writes the clean result into isolated_output_dir.
         """
         saved_artifacts = []
         patterns = [
@@ -685,6 +814,9 @@ class EmbodiedToolHarness:
                 if not filepath or not clean_content:
                     continue
 
+                clean_content, inline_edits = self._apply_inline_stream_edits(clean_content)
+                clean_content = clean_content.strip("\n\r")
+
                 full_path = self._resolve_safe_write_path(filepath)
                 os.makedirs(os.path.dirname(full_path), exist_ok=True)
 
@@ -696,8 +828,13 @@ class EmbodiedToolHarness:
                     "path": full_path,
                     "rel_path": rel_path,
                     "size": len(clean_content),
+                    "inline_edits": inline_edits,
                 })
-                print(f"\n💾 \033[1;32m[Auto-Save XML Artifact (Isolated Sandbox)]\033[0m -> \033[1;36m{rel_path}\033[0m ({len(clean_content)} bytes)")
+                edit_tag = f" | ✂️ InlineEdits={inline_edits}" if inline_edits else ""
+                print(
+                    f"\n💾 \033[1;32m[Auto-Save XML Artifact (Isolated Sandbox)]\033[0m -> "
+                    f"\033[1;36m{rel_path}\033[0m ({len(clean_content)} bytes{edit_tag})"
+                )
 
         return saved_artifacts
 

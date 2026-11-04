@@ -27,6 +27,18 @@ class DynamicLoRAExpertPool(nn.Module):
             la = nn.Parameter(torch.empty(rank, in_dim, device=device, dtype=dtype))
             lb = nn.Parameter(torch.zeros(out_dim, rank, device=device, dtype=dtype))
             nn.init.kaiming_uniform_(la, a=5**0.5)
+            with torch.no_grad():
+                # Immediately enforce initial 2:4 structural sparsity (50% zeros) and homeostatic norm μ0=1.32
+                # on Virgin Reset so fresh weights never spike live_gate biases or trigger EAGLE3 draft rejections!
+                if in_dim % 4 == 0:
+                    q = la.data.float().view(rank, in_dim // 4, 4)
+                    _, top2 = torch.topk(torch.abs(q), k=2, dim=-1)
+                    mask = torch.zeros_like(q, dtype=torch.bool).scatter_(-1, top2, True)
+                    la.data.copy_(torch.where(mask, q, torch.zeros_like(q)).reshape(rank, in_dim).to(dtype))
+                init_norm = float(torch.norm(la.data.float()).item())
+                if init_norm > 1e-6:
+                    target_init = 1.28 + 0.02 * (i % 5)
+                    la.data.mul_(target_init / init_norm)
             self.lora_a[f"exp_{i}"] = la
             self.lora_b[f"exp_{i}"] = lb
             self._ltm_baseline_a[f"exp_{i}"] = la.data.detach().clone()
@@ -111,35 +123,38 @@ class DynamicLoRAExpertPool(nn.Module):
                     continue
 
                 if sandbox_passed is True:
-                    # Dopaminergic Consolidation: reinforce causal trace & lock into LTM
+                    # Dopaminergic Consolidation: reinforce causal trace on CURRENT 2:4 mask (preserving newly re-ignited synapses!)
                     nz_mask = (la != 0).to(la.dtype)
                     la.add_((0.15 * trace) * nz_mask)
                     nrm = float(torch.norm(la.float()).item())
-                    if nrm > 2.80:
+                    if 0.0 < nrm < 1.05:
+                        la.mul_(1.15 / nrm)
+                    elif nrm > 2.80:
                         la.mul_(2.80 / nrm)
                     self._ltm_baseline_a[k] = la.detach().clone()
                     self.eligibility_trace_a[k].zero_()
                 elif sandbox_passed is False:
-                    # Anti-Hebbian Rollback + Immediate Triton 2:4 Structural Prune on Active Faulty Channels:
-                    # 1) Subtract 0.25 * E_i(t) from clean LTM baseline to weaken the exact channels that caused the bug
-                    # 2) Immediately invoke Triton 2:4 Fisher pruning so weakened buggy channels lose the Top-2 quad competition and become 0.0!
+                    # Anti-Hebbian Rollback + Active Mask Escape:
+                    # 1) Weaken channels that fired during the failed attempt while preserving current `la` mask flips
+                    # 2) Apply stronger Hadamard dispersion (mix=0.36) on active fault channels before Triton 2:4 pruning
+                    #    so dead synapses in faulty quads overtake weakened survivors and flip the 2:4 mask!
                     trace_energy = float(torch.norm(trace.float()).item())
-                    nz_mask = (base != 0).to(la.dtype)
-                    reverted = (base - 0.25 * trace) * nz_mask
+                    cur_nz_mask = (la != 0).to(la.dtype)
+                    reverted = (la - 0.30 * trace) * cur_nz_mask
                     nrm = float(torch.norm(reverted.float()).item())
-                    if 0.0 < nrm < 0.65:
-                        reverted.mul_(0.65 / nrm)
+                    if 0.0 < nrm < 1.05:
+                        reverted.mul_(1.18 / nrm)
                     elif nrm > 2.80:
                         reverted.mul_(2.80 / nrm)
                     la.copy_(reverted)
                     if trace_energy > 1e-6:
                         try:
                             from triton_localsleep_kernels import launch_triton_fisher_24_prune
-                            self.apply_incoherent_hadamard_dispersion(la, mix=0.06)
-                            launch_triton_fisher_24_prune(la, shy_lambda=0.08, survival_floor=0.985)
+                            self.apply_incoherent_hadamard_dispersion(la, mix=0.36)
+                            launch_triton_fisher_24_prune(la, shy_lambda=0.05, survival_floor=0.992)
                         except Exception:
                             pass
-                    # Keep baseline clean for the retry attempt
+                    # Keep baseline updated for the retry attempt
                     self._ltm_baseline_a[k] = la.detach().clone()
                     self.eligibility_trace_a[k].zero_()
                 else:

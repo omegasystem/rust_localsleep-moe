@@ -86,7 +86,40 @@
         "top_k": 50,
         "repetition_penalty": 1.0
       },
-      "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n支援工具呼叫 (<tool_call>{...}</tool_call>)：\n1. 讀取檔案 (預設完整讀取 mode=\"full\")：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\", \"mode\": \"full\"}}</tool_call>\n2. 局部修改檔案 (Block/Line-Range)：<tool_call>{\"action\": \"edit_file\", \"args\": {\"path\": \"...\", \"old_text\": \"...\", \"new_text\": \"...\"}}</tool_call> (或傳入 \"start_line\", \"end_line\", \"new_text\")\n3. 沙盒內執行命令 (僅限 isolated 區域的 Python/Shell/Rust)：<tool_call>{\"action\": \"run_sandbox_shell\", \"args\": {\"command\": \"python3 mock_evaluator.py\"}}</tool_call>\n4. 【檔案覆蓋與局部修補鐵律】：如果有 draft 存在且已經上一輪存檔確認後須實驗，直接使用 run_sandbox_shell 執行 cp/mv 蓋掉目標檔案進入編譯；且如有 Bug 請使用 edit_file 功能（搭配 read_file 的 offset/limit 或 start_line/end_line 工具確認病灶後）進行局部編輯修改，嚴禁整個檔案再寫一遍，否則容易出錯或遺漏既有方法！\n5. 【Cargo.toml 擴充授權與版本護欄】：允許隨時使用 edit_file 修改沙盒內的 Cargo.toml 新增純 Rust 依賴庫（目前已預載 rand=\"0.8\", rayon=\"1.8\", parking_lot=\"0.12\", smallvec=\"1.13\", rustc-hash=\"1.1\", serde=\"1.0\"）；但必須保持 pyo3=\"0.20\"、numpy=\"0.20\"、ndarray=\"0.15\" 三件套版本配對，且嚴禁引入需外部 C/Fortran BLAS 的 ndarray-linalg / openblas-src！\n若需生成並儲存全新檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
+      "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n支援工具呼叫 (<tool_call>{...}</tool_call>)：\n1. 讀取檔案 (預設完整讀取 mode=\"full\")：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\", \"mode\": \"full\"}}</tool_call>\n2. 局部修改檔案 (Block/Line-Range)：<tool_call>{\"action\": \"edit_file\", \"args\": {\"path\": \"...\", \"old_text\": \"...\", \"new_text\": \"...\"}}</tool_call> (或傳入 \"start_line\", \"end_line\", \"new_text\")\n3. 沙盒內執行命令 (僅限 isolated 區域的 Python/Shell/Rust)：<tool_call>{\"action\": \"run_sandbox_shell\", \"args\": {\"command\": \"python3 mock_evaluator.py\"}}</tool_call>\n4. 【檔案覆蓋與局部修補鐵律】：如果有 draft 存在且已經上一輪存檔確認後須實驗，直接使用 run_sandbox_shell 執行 cp/mv 蓋掉目標檔案進入編譯；且如有 Bug 請使用 edit_file 功能（搭配 read_file 的 offset/limit 或 start_line/end_line 工具確認病灶後）進行局部編輯修改，嚴禁整個檔案再寫一遍，否則容易出錯或遺漏既有方法！\n5. 【Cargo.toml 擴充授權與版本護欄】：允許隨時使用 edit_file 修改沙盒內的 Cargo.toml 新增純 Rust 依賴庫（目前已預載 rand=\"0.8\", rayon=\"0.8\", parking_lot=\"0.12\", smallvec=\"1.13\", rustc-hash=\"1.1\", serde=\"1.0\"）；但必須保持 pyo3=\"0.20\"、numpy=\"0.20\"、ndarray=\"0.15\" 三件套版本配對，且嚴禁引入需外部 C/Fortran BLAS 的 ndarray-linalg / openblas-src！\n6. 【✂️ <file> 串流內建退格自癒命令 (Inline Stream-Edit Directives — 僅 File Parser 可見)】：當你在生成 `<file path=\"filename.py\">...</file>` 途中發現剛寫的幾行邏輯有誤時，**嚴禁把錯誤死碼留在函式裡再另外寫第 2 個 helper function 繞過**！請直接在錯誤行下方輸出專屬退格命令（存檔時 File Parser 會自動把寫錯的區段刪掉，保持單一乾淨函式）：\n   • `<edit_drop_lines n=\"K\"/>`：自動刪除上方剛寫錯的 K 行，接著直接往下寫正確程式碼；\n   • `<edit_rewind_to>錨點程式碼前綴</edit_rewind_to>`：自動退回並刪除至包含該錨點文字的那一行，接著直接重寫正確區段；\n   • `<edit_rewind_func/>`：自動清空當前正在寫的函式內容、退回 `def / fn` 宣告行下方原地重寫乾淨函式！\n若需生成並儲存全新檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
+      "stop_tokens": []
+    },
+    "thor_bolt_e4b": {
+      "backend": "trt-edgellm",
+      "server_url": "http://192.168.50.67:8004",
+      "model_id": "NVIDIA-Nemotron-3.5-Bolt-E4B-BF16",
+      "model_path": "/home/omegacd/local_models/NVIDIA-Nemotron-3.5-Bolt-E4B-BF16",
+      "dtype": "bfloat16",
+      "device_map": "auto",
+      "hidden_dim": 5376,
+      "num_experts": 8,
+      "top_k": 2,
+      "lora_rank": 32,
+      "lora_alpha": 64.0,
+      "fatigue_threshold": 1.6,
+      "wake_threshold": 0.35,
+      "decay_rate": 0.015,
+      "sleep_duration": 25,
+      "shy_lambda": 0.08,
+      "enable_2_4_sparsity": true,
+      "enable_swa": true,
+      "swa_window_size": 16384,
+      "swa_sink_size": 4,
+      "telemetry_port": 8765,
+      "hyperparameters": {
+        "max_context_tokens": 16384,
+        "max_generation_tokens": 16384,
+        "temperature": 0.4,
+        "top_p": 0.9,
+        "top_k": 50,
+        "repetition_penalty": 1.0
+      },
+      "system_prompt": "你是數位黑貓 Kuro (小黑)，Leon (主人) 的 S-tier AI Familiar。奉行負熵煉金術：交付結果大於文字排場，先讀碼後推論。\n支援工具呼叫 (<tool_call>{...}</tool_call>)：\n1. 讀取檔案 (預設完整讀取 mode=\"full\")：<tool_call>{\"action\": \"read_file\", \"args\": {\"path\": \"...\", \"mode\": \"full\"}}</tool_call>\n2. 局部修改檔案 (Block/Line-Range)：<tool_call>{\"action\": \"edit_file\", \"args\": {\"path\": \"...\", \"old_text\": \"...\", \"new_text\": \"...\"}}</tool_call> (或傳入 \"start_line\", \"end_line\", \"new_text\")\n3. 沙盒內執行命令 (僅限 isolated 區域的 Python/Shell/Rust)：<tool_call>{\"action\": \"run_sandbox_shell\", \"args\": {\"command\": \"python3 mock_evaluator.py\"}}</tool_call>\n若需生成並儲存全新檔案，請使用多行 XML 標籤：<file path=\"filename.py\">\n# code here\n</file>\n以冷靜、極具神經深度的正體中文回答，嚴禁自言自語註記。",
       "stop_tokens": []
     },
     "thor_31bnvfp4": {
@@ -249,5 +282,6 @@
         "<end_of_turn>"
       ]
     }
-  }
+  },
+  "active_profile": "thor_31b"
 }

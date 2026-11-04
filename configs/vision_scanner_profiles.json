@@ -1,0 +1,32 @@
+{
+  "active_profile": "thor_port_8004",
+  "profiles": {
+    "thor_port_8000": {
+      "name": "⚡ AGX Thor Primary VLM (:8000 — Bolt-E4B / Gemma-4-31B)",
+      "api_base": "http://192.168.50.67:8000/v1",
+      "api_key": "",
+      "model": "auto",
+      "mode": "json_descriptor",
+      "max_tokens": 512,
+      "temperature": 0.2
+    },
+    "thor_port_8004": {
+      "name": "🚀 AGX Thor Secondary VLM (:8004 — Parallel Instance)",
+      "api_base": "http://192.168.10.11:8004/v1",
+      "api_key": "",
+      "model": "NVIDIA-Nemotron-3.5-Bolt-E4B-BF16",
+      "mode": "json_bbox",
+      "max_tokens": 512,
+      "temperature": 0.2
+    },
+    "local_5080_port_8001": {
+      "name": "🖥️ Local RTX 5080 Server (:8001)",
+      "api_base": "http://127.0.0.1:8001/v1",
+      "api_key": "",
+      "model": "auto",
+      "mode": "en_compact",
+      "max_tokens": 512,
+      "temperature": 0.2
+    }
+  }
+}

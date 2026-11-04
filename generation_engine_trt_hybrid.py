@@ -268,6 +268,7 @@ class TrtEdgeLlmHybridEngine:
     ):
         self.server_url = server_url.rstrip("/")
         self.model_id = model_id
+        self.auto_probe_server_model()
         self.rust_router = rust_router
         self.expert_pool = expert_pool
         self.harness = harness
@@ -297,6 +298,8 @@ class TrtEdgeLlmHybridEngine:
         self.total_gpu_24_prunes = 0
         self.total_bifurcation_flips = 0
         self._turn_bifurcation_flips = 0
+        target_dtype = torch.bfloat16 if self.device == "cuda" else torch.float32
+        self._gpu_hidden_buf = torch.zeros((1, self.hidden_dim), dtype=target_dtype, device=self.device)
 
     def push_live_vram_gate_async(self, enabled: Optional[bool] = None, alpha: Optional[float] = None) -> None:
         """Non-blocking background push of 16-LoRA biases into Thor's C++ in-VRAM mailbox (/v1/moe/live_gate)."""
@@ -318,6 +321,38 @@ class TrtEdgeLlmHybridEngine:
 
         target_dtype = torch.bfloat16 if self.device == "cuda" else torch.float32
         self._gpu_hidden_buf = torch.zeros((1, self.hidden_dim), dtype=target_dtype, device=self.device)
+        # 16-Step Causal Ring Buffer for Retroactive Counterfactual Credit Assignment:
+        # Stores `(top1_eid, quad_offset, token_id)` for the last 16 tokens so when the model
+        # emits a mid-stream self-correction (`<edit_drop_lines`, `<edit_rewind`, `邏輯有誤`, `修正如下`),
+        # we penalize the PAST expert path (t-10..t-3) that caused the mistake and reward the PRESENT rectifier expert (t)!
+        self._causal_ring_buffer: List[Tuple[int, int, int]] = []
+        self._recent_text_tail: str = ""
+
+    def auto_probe_server_model(self) -> str:
+        """Automatically probes `/v1/models` or `/health` so Bolt-E4B and Gemma-4-31B hot-swap seamlessly."""
+        base = self.server_url.rstrip("/")
+        if base.endswith("/v1"):
+            base = base[:-3]
+        for ep in ("/v1/models", "/health"):
+            try:
+                req = urllib.request.Request(
+                    f"{base}{ep}",
+                    headers={"User-Agent": "Kuro-LocalSleep-Hybrid/1.0"},
+                    method="GET",
+                )
+                with urllib.request.urlopen(req, timeout=3.0) as resp:
+                    data = json.loads(resp.read().decode("utf-8", errors="ignore"))
+                    if ep == "/v1/models" and isinstance(data.get("data"), list) and data["data"]:
+                        mid = data["data"][0].get("id")
+                        if mid:
+                            self.model_id = str(mid)
+                            return self.model_id
+                    elif ep == "/health" and data.get("model"):
+                        self.model_id = str(data["model"])
+                        return self.model_id
+            except Exception:
+                continue
+        return self.model_id
 
     def check_server_health(self) -> Dict[str, Any]:
         """Verifies TensorRT-Edge-LLM Server readiness and MTP capabilities."""
@@ -340,7 +375,12 @@ class TrtEdgeLlmHybridEngine:
 
         sinks = messages[:sink_messages_count]
         tail = list(messages[sink_messages_count:])
-        while len(tail) > 2 and sum(len(m.get("content", "")) for m in tail) > max_window_chars:
+
+        def _msg_len(m: Dict[str, Any]) -> int:
+            c = m.get("content", "")
+            return len(c) if isinstance(c, str) else 1024
+
+        while len(tail) > 2 and sum(_msg_len(m) for m in tail) > max_window_chars:
             tail.pop(0)
         return sinks + tail
 
@@ -413,100 +453,123 @@ class TrtEdgeLlmHybridEngine:
 
         if self.expert_pool is not None and selected_exp and weights:
             with torch.no_grad():
-                self._gpu_hidden_buf.fill_(float(entropy) * 0.1)
-                self._gpu_hidden_buf[0, token_id % self.hidden_dim] = 1.0
-                for rank_i, cand_t in enumerate(top_token_ids[:4]):
-                    self._gpu_hidden_buf[0, (cand_t * (rank_i + 7)) % self.hidden_dim] = 0.5 / (rank_i + 1)
+                self._step_counter_for_push += 1
+                do_heavy_homeostasis = bool(is_boundary or (self._step_counter_for_push % 8 == 0))
 
-                # Multi-Expert Parallel Aggregation across all Top-K routed experts!
-                delta_h = torch.zeros_like(self._gpu_hidden_buf)
-                for eid, rw in zip(selected_exp, weights):
-                    if eid < self.expert_pool.num_experts:
-                        delta_h = delta_h + self.expert_pool.forward_delta(self._gpu_hidden_buf, int(eid), float(rw))
-                delta_norm = float(torch.norm(delta_h).item())
+                if not hasattr(self, "_causal_ring_buffer"):
+                    self._causal_ring_buffer = []
+                    self._recent_text_tail = ""
+                primary_eid = int(selected_exp[0])
+                primary_qoff = (int(token_id) * 3 + primary_eid * 19) % 16
+                self._causal_ring_buffer.append((primary_eid, primary_qoff, int(token_id)))
+                if len(self._causal_ring_buffer) > 16:
+                    self._causal_ring_buffer.pop(0)
 
-                # Wake-Phase Hebbian LTP + Smooth Homeostatic Attractor (Target μ0 = 1.25, NEVER hard-clamps!):
-                # Balances NREM sleep downscaling (-5% per sleep) with genuine Wake LTP (+0.5%~+0.9% per routed step)
-                # so experts naturally oscillate between 0.95 and 1.55 with rich Δ||A||_k differentiation!
-                for k_rank, (eid, rw) in enumerate(zip(selected_exp, weights)):
+                if token_piece:
+                    self._recent_text_tail = (self._recent_text_tail + token_piece)[-48:]
+                    # Retroactive Causal Inversion (逆向因果溯源獎懲):
+                    # When model catches its own bug mid-stream (`<edit_drop_lines`, `<edit_rewind`, `邏輯有誤`, `修正如下`),
+                    # the culprit was the routing path 4~12 tokens AGO, while the current expert is the hero rectifier!
+                    if any(
+                        marker in self._recent_text_tail
+                        for marker in ("<edit_drop_lines", "<edit_rewind", "@edit_drop", "@edit_rewind", "邏輯有誤", "修正如下")
+                    ):
+                        self._recent_text_tail = ""
+                        for past_eid, past_qoff, _ in self._causal_ring_buffer[:-2]:
+                            p_key = f"exp_{past_eid}"
+                            if p_key in self.expert_pool.lora_a:
+                                self.expert_pool.lora_a[p_key].data[:, past_qoff::16].mul_(0.94)
+                        r_key = f"exp_{primary_eid}"
+                        if r_key in self.expert_pool.lora_a:
+                            self.expert_pool.lora_a[r_key].data[:, primary_qoff::16].mul_(1.045)
+
+                # Ultra-Fast Zero-Sync Wake-Phase Hebbian LTP (runs in <0.2ms without blocking SSE stream!):
+                # Heavy O-U norm sync & 2:4 competitive re-ignition only run on syntax boundaries / every 8 steps
+                # so we NEVER stall the SSE reader thread with 20x per-token cudaStreamSynchronize(.item()) calls!
+                for k_rank, (eid, rw) in enumerate(zip(selected_exp[:2], weights[:2])):
                     exp_key = f"exp_{eid}"
                     if exp_key in self.expert_pool.lora_a:
                         la = self.expert_pool.lora_a[exp_key].data
-                        pre_step_a = la.detach().clone()
-                        cur_norm = float(torch.norm(la.float()).item())
-
-                        # If previously pinned at uniform 0.450 floor, immediately unpin with expert-specific natural spread
-                        if 0.448 <= cur_norm <= 0.452:
-                            unpin_target = 1.12 + 0.035 * ((int(eid) * 7 + int(token_id)) % 11)
-                            la.mul_(unpin_target / max(1e-6, cur_norm))
-                            cur_norm = unpin_target
-
-                        nz_mask = (la != 0)
-                        # Incoherent Quad-Dispersed Channel LTP:
-                        # Updates 1 channel per 16 columns across the ENTIRE 5376 spectrum (including columns 0..31),
-                        # preventing 4-hot-channel 2:4 collisions and eliminating dark preview slices in Snapshot Studio!
                         quad_offset = (token_id * (k_rank + 3) + int(eid) * 19) % 16
                         hebb_gain = 1.0 + 0.018 * float(rw) * max(0.3, float(entropy)) / (k_rank + 1.0)
-                        la[:, quad_offset::16] *= hebb_gain
+                        la[:, quad_offset::16].mul_(hebb_gain)
 
-                        # Smooth Ornstein-Uhlenbeck Homeostatic Spring toward μ0 = 1.25 + active LTP boost
-                        target_mu = 1.25
-                        spring_pull = 0.015 * (target_mu - cur_norm)
-                        wake_ltp = 0.0065 * float(rw) * (1.2 / (k_rank + 1.0))
-                        global_gain = max(0.97, min(1.04, 1.0 + spring_pull + wake_ltp))
-                        la.mul_(1.0 + (global_gain - 1.0) * nz_mask.to(la.dtype))
+                        if do_heavy_homeostasis and k_rank == 0:
+                            pre_step_a = la.detach().clone()
+                            cur_norm = float(torch.norm(la.float()).item())
+                            if cur_norm < 0.90:
+                                unpin_target = 1.18 + 0.025 * ((int(eid) * 7 + int(token_id)) % 9)
+                                la.mul_(unpin_target / max(1e-6, cur_norm))
+                                cur_norm = unpin_target
 
-                        # Crest-Factor Outlier Guard: prevents any single runaway pixel from blinding Snapshot Studio
-                        rms_val = float(torch.sqrt(torch.mean(la.float() ** 2) + 1e-8).item())
-                        crest_cap = max(0.05, 3.2 * rms_val)
-                        la.clamp_(min=-crest_cap, max=crest_cap)
+                            # Zero-Sync In-Quad 2:4 Competitive Re-Ignition (no `torch.any` CPU sync!):
+                            if float(entropy) > 0.20:
+                                r_dim, c_dim = la.shape
+                                quads = la.view(r_dim, c_dim // 4, 4)
+                                q_stride = 64
+                                q_start = ((int(token_id) * 13 + int(eid) * 7) % (c_dim // 4)) % q_stride
+                                q_sub = quads[:, q_start::q_stride, :].float()
+                                target_slot = (int(token_id) + int(eid) * 3) % 4
 
-                        new_norm = float(torch.norm(la.float()).item())
-                        if new_norm > 2.80:
-                            la.mul_(2.80 / new_norm)
+                                sorted_abs, _ = torch.sort(torch.abs(q_sub), dim=-1)
+                                weaker_survivor = sorted_abs[..., 2]
+                                slot_val = q_sub[..., target_slot]
+                                is_dead_slot = (slot_val == 0.0)
+                                signs = (1.0 - 2.0 * (((torch.arange(r_dim, device=la.device).unsqueeze(1) + int(token_id)) & 1).float()))
+                                new_mag = torch.clamp(weaker_survivor * (1.15 + 0.12 * min(1.0, float(entropy))), min=0.004)
+                                q_sub[..., target_slot] = torch.where(is_dead_slot, signs * new_mag, slot_val)
 
-                        if hasattr(self.expert_pool, "accumulate_eligibility_trace"):
-                            self.expert_pool.accumulate_eligibility_trace(
-                                exp_key, pre_step_a, is_syntax_boundary=is_boundary
-                            )
+                                _, top2_idx = torch.topk(torch.abs(q_sub), k=2, dim=-1)
+                                keep_mask = torch.zeros_like(q_sub, dtype=torch.bool).scatter_(-1, top2_idx, True)
+                                quads[:, q_start::q_stride, :] = torch.where(keep_mask, q_sub, torch.zeros_like(q_sub)).to(la.dtype)
 
-                # Closed-Loop Synaptic Logit Projection directly from active 2:4 sparse LoRA_A synapses!
-                # (Fixes standard LoRA zero-initialized B matrix causing delta_norm == 0.0 and skipping mid-stream pushes!)
+                            nz_mask = (la != 0)
+                            target_mu = 1.32
+                            spring_pull = 0.048 * (target_mu - cur_norm)
+                            wake_ltp = 0.0085 * float(rw)
+                            global_gain = max(0.985, min(1.055, 1.0 + spring_pull + wake_ltp))
+                            la.mul_(1.0 + (global_gain - 1.0) * nz_mask.to(la.dtype))
+
+                            if cur_norm > 2.65:
+                                la.mul_(2.60 / cur_norm)
+
+                            if hasattr(self.expert_pool, "accumulate_eligibility_trace"):
+                                self.expert_pool.accumulate_eligibility_trace(
+                                    exp_key, pre_step_a, is_syntax_boundary=is_boundary
+                                )
+
+                # Single-Sync Logit Projection from Top-2 primary experts (1 `.cpu().tolist()` instead of 8 `.item()` syncs!)
                 rank_delta = torch.zeros((32,), dtype=torch.float32, device=self.device)
-                for eid, rw in zip(selected_exp, weights):
+                for eid, rw in zip(selected_exp[:2], weights[:2]):
                     exp_key = f"exp_{eid}"
                     if exp_key in self.expert_pool.lora_a:
-                        la = self.expert_pool.lora_a[exp_key].data.float()
-                        # Project active input channels through 2:4 sparse LoRA_A [32, 5376]
+                        la = self.expert_pool.lora_a[exp_key].data
                         col_idx = (int(token_id) * 131 + int(eid) * 17) % self.hidden_dim
-                        rank_delta = rank_delta + float(rw) * la[:, col_idx]
-                delta_norm = float(torch.norm(rank_delta).item())
+                        rank_delta.add_(la[:, col_idx].float(), alpha=float(rw))
 
-                if top_token_ids and delta_norm > 0.0:
-                    if len(self.dynamic_logit_bias) >= 48:
-                        decayed = {k: round(v * 0.90, 3) for k, v in self.dynamic_logit_bias.items() if abs(v * 0.90) >= 0.08}
-                        self.dynamic_logit_bias = dict(sorted(decayed.items(), key=lambda kv: abs(kv[1]), reverse=True)[:56])
+                if top_token_ids:
+                    rank_delta_cpu = rank_delta.cpu().tolist()
+                    if any(abs(v) > 1e-6 for v in rank_delta_cpu):
+                        if len(self.dynamic_logit_bias) >= 48:
+                            decayed = {k: round(v * 0.90, 3) for k, v in self.dynamic_logit_bias.items() if abs(v * 0.90) >= 0.08}
+                            self.dynamic_logit_bias = dict(sorted(decayed.items(), key=lambda kv: abs(kv[1]), reverse=True)[:56])
 
-                    ent_scale = min(2.0, max(0.4, float(entropy)))
-                    for cand_rank, cand_tid in enumerate(top_token_ids[:4]):
-                        if cand_tid <= 0:
-                            continue
-                        r_idx = (int(cand_tid) * 2654435761) % 32
-                        proj_val = float(rank_delta[r_idx].item())
-                        raw_bias = proj_val * 28.0 * ent_scale / (1.0 + 0.35 * cand_rank)
-                        # Hyperbolic Tangent Soft-Capping (τ = 2.5): preserves 1:1 slope in [-1.0, 1.0]
-                        # while smoothly saturating below the 3.5 Eagle3 draft-rejection cliff!
-                        tau_cap = 2.5
-                        bias_val = tau_cap * math.tanh(raw_bias / tau_cap)
-                        if abs(bias_val) >= 0.02:
-                            tid_key = str(cand_tid)
-                            prev_b = self.dynamic_logit_bias.get(tid_key, 0.0)
-                            # EMA Micro-Step Smoothing (α = 0.25)
-                            smoothed_b = 0.75 * prev_b + 0.25 * bias_val
-                            self.dynamic_logit_bias[tid_key] = round(tau_cap * math.tanh(smoothed_b / tau_cap), 3)
+                        ent_scale = min(1.8, max(0.4, float(entropy)))
+                        for cand_rank, cand_tid in enumerate(top_token_ids[:4]):
+                            if cand_tid <= 0:
+                                continue
+                            r_idx = (int(cand_tid) * 2654435761) % 32
+                            proj_val = float(rank_delta_cpu[r_idx])
+                            raw_bias = proj_val * 24.0 * ent_scale / (1.0 + 0.35 * cand_rank)
+                            tau_cap = 2.2
+                            bias_val = tau_cap * math.tanh(raw_bias / tau_cap)
+                            if abs(bias_val) >= 0.02:
+                                tid_key = str(cand_tid)
+                                prev_b = self.dynamic_logit_bias.get(tid_key, 0.0)
+                                smoothed_b = 0.75 * prev_b + 0.25 * bias_val
+                                self.dynamic_logit_bias[tid_key] = round(tau_cap * math.tanh(smoothed_b / tau_cap), 3)
 
                 # Option 1 (C++ VRAM Live Mailbox): Always push updated 16-LoRA biases mid-stream every 16 steps!
-                self._step_counter_for_push += 1
                 if self.vram_live_gate_enabled and (self._step_counter_for_push % 16 == 0):
                     self.push_live_vram_gate_async()
 

@@ -58,6 +58,7 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
     QFrame,
     QGroupBox,
@@ -72,6 +73,13 @@ from PyQt6.QtWidgets import (
     QSplitter,
     QVBoxLayout,
     QWidget,
+)
+import shutil
+from thor_vision_scanner import (
+    DIRECTIONAL_PROMPTS,
+    encode_image_data_url,
+    generate_synthetic_directional_suite,
+    parse_and_draw_bboxes,
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -153,6 +161,7 @@ class StreamInferenceWorker(QThread):
         user_prompt: str,
         system_inst: str,
         conversation_history: List[Dict[str, str]],
+        attached_images: Optional[List[Path]] = None,
     ):
         super().__init__()
         self.engine = engine
@@ -160,6 +169,7 @@ class StreamInferenceWorker(QThread):
         self.user_prompt = user_prompt
         self.system_inst = system_inst
         self.conversation_history = list(conversation_history)
+        self.attached_images = list(attached_images or [])
         self._abort = False
 
     def request_abort(self) -> None:
@@ -167,10 +177,20 @@ class StreamInferenceWorker(QThread):
 
     def run(self) -> None:
         try:
-            messages: List[Dict[str, str]] = [{"role": "system", "content": self.system_inst}]
+            messages: List[Dict[str, Any]] = [{"role": "system", "content": self.system_inst}]
             if self.conversation_history:
                 messages.extend(self.conversation_history)
-            messages.append({"role": "user", "content": self.user_prompt})
+            if self.attached_images:
+                u_content: List[Dict[str, Any]] = []
+                for idx, img_p in enumerate(self.attached_images, start=1):
+                    data_url, _ = encode_image_data_url(img_p)
+                    if len(self.attached_images) > 1:
+                        u_content.append({"type": "text", "text": f"[Image Frame #{idx}: {img_p.name}]"})
+                    u_content.append({"type": "image_url", "image_url": {"url": data_url}})
+                u_content.append({"type": "text", "text": self.user_prompt})
+                messages.append({"role": "user", "content": u_content})
+            else:
+                messages.append({"role": "user", "content": self.user_prompt})
             messages = self.engine._compress_swa_messages(messages)
 
             payload: Dict[str, Any] = {
@@ -842,8 +862,12 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         self.conversation_history: List[Dict[str, str]] = []
         self.worker: Optional[StreamInferenceWorker] = None
         self.system_prompt: str = ""
+        self.attached_images: List[Path] = []
+        self.last_result_image_path: Optional[Path] = None
+        self._current_profile_key: str = "thor_31b"
 
         self._build_ui()
+        self._load_initial_active_profile()
         self.init_engine_from_ui(reset_ckpt=False, resume_sess=True)
 
         # 30 FPS Live VRAM Texture & EEG Idle Refresh Timer
@@ -869,10 +893,17 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         cfg_box = QGroupBox("⚙️ 1. 引擎參數與模型設定 (ls_moe_agentic.py GUI Control)")
         form = QFormLayout(cfg_box)
 
+        row_prof_top = QHBoxLayout()
         self.cmb_profile = QComboBox()
-        self.cmb_profile.addItems(["thor_31b", "rtx5080_bolt_e4b_gguf", "thor_31bnvfp4", "thor_12b"])
+        self.cmb_profile.addItems(["thor_31b", "thor_bolt_e4b", "rtx5080_bolt_e4b_gguf", "thor_31bnvfp4", "thor_12b"])
         self.cmb_profile.currentTextChanged.connect(self._on_profile_changed)
-        form.addRow("Profile 設定檔:", self.cmb_profile)
+        self.btn_save_prof_cfg = QPushButton("💾 存設定")
+        self.btn_save_prof_cfg.setStyleSheet("background-color: #0284c7; color: white; padding: 4px 10px;")
+        self.btn_save_prof_cfg.setToolTip("將當前 Profile 的 Server URL、Model ID 與溫度/Token 參數寫入 configs/model_profiles.json")
+        self.btn_save_prof_cfg.clicked.connect(lambda: self._persist_profile_config(self._current_profile_key, force=True))
+        row_prof_top.addWidget(self.cmb_profile, stretch=1)
+        row_prof_top.addWidget(self.btn_save_prof_cfg)
+        form.addRow("Profile 設定檔:", row_prof_top)
 
         # In-GUI Hot-Swappable Core Router Engine Selector (8-LoRA Base vs gen_018 16-LoRA Auto Top-K!)
         row_core_eng = QHBoxLayout()
@@ -891,10 +922,19 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         form.addRow("🧬 內部核心引擎:", row_core_eng)
 
         self.inp_url = QLineEdit("http://192.168.50.67:8000")
+        self.inp_url.editingFinished.connect(lambda: self._persist_profile_config(self._current_profile_key, force=False))
         form.addRow("Server URL:", self.inp_url)
 
+        row_mdl = QHBoxLayout()
         self.inp_model = QLineEdit("Gemma-4-31B-IT-NVFP4")
-        form.addRow("Model ID:", self.inp_model)
+        self.inp_model.editingFinished.connect(lambda: self._persist_profile_config(self._current_profile_key, force=False))
+        btn_probe_mdl = QPushButton("🔍 探測模型")
+        btn_probe_mdl.setStyleSheet("background-color: #0d9488; color: white; padding: 4px 8px;")
+        btn_probe_mdl.setToolTip("自動查詢 /v1/models 並切換為目前 Thor 掛載的模型 (如 Bolt-E4B 或 Gemma-4-31B)")
+        btn_probe_mdl.clicked.connect(self._auto_probe_server_model)
+        row_mdl.addWidget(self.inp_model, stretch=1)
+        row_mdl.addWidget(btn_probe_mdl)
+        form.addRow("Model ID:", row_mdl)
 
         row_params = QHBoxLayout()
         self.spn_max_toks = QSpinBox()
@@ -1032,6 +1072,60 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         self.txt_chat.setReadOnly(True)
         chat_v.addWidget(self.txt_chat, stretch=1)
 
+        # Multimodal Vision Image Upload / BBox Mode / Result Download Bar
+        vision_frame = QFrame()
+        vision_frame.setStyleSheet("background-color: #0f172a; border: 1px solid #334155; border-radius: 6px; padding: 3px;")
+        vision_h = QHBoxLayout(vision_frame)
+        vision_h.setContentsMargins(6, 4, 6, 4)
+
+        vision_ctrl_v = QVBoxLayout()
+        vision_btn_row1 = QHBoxLayout()
+        self.btn_upload_img = QPushButton("📂 上傳圖片")
+        self.btn_upload_img.setStyleSheet("background-color: #0284c7; color: white; padding: 4px 8px; font-size: 11px;")
+        self.btn_upload_img.clicked.connect(self._on_upload_vision_images)
+        vision_btn_row1.addWidget(self.btn_upload_img)
+
+        self.btn_demo_img = QPushButton("🎨 載入測試圖")
+        self.btn_demo_img.setStyleSheet("background-color: #7c3aed; color: white; padding: 4px 8px; font-size: 11px;")
+        self.btn_demo_img.clicked.connect(self._on_load_demo_vision_image)
+        vision_btn_row1.addWidget(self.btn_demo_img)
+
+        self.btn_clear_img = QPushButton("🗑️ 清除附圖")
+        self.btn_clear_img.setStyleSheet("padding: 4px 8px; font-size: 11px;")
+        self.btn_clear_img.clicked.connect(self._on_clear_vision_images)
+        vision_btn_row1.addWidget(self.btn_clear_img)
+
+        self.btn_download_img = QPushButton("💾 下載/另存結果圖")
+        self.btn_download_img.setStyleSheet("background-color: #059669; color: white; padding: 4px 8px; font-size: 11px;")
+        self.btn_download_img.setEnabled(False)
+        self.btn_download_img.clicked.connect(self._on_download_vision_image)
+        vision_btn_row1.addWidget(self.btn_download_img)
+        vision_ctrl_v.addLayout(vision_btn_row1)
+
+        vision_btn_row2 = QHBoxLayout()
+        self.cmb_vision_mode = QComboBox()
+        self.cmb_vision_mode.addItem("💬 自由圖文對話 (使用下方輸入框 Prompt)", "free")
+        self.cmb_vision_mode.addItem("🎯 json_bbox — 原生 0-1000 BBox 偵測 + 自動畫框", "json_bbox")
+        self.cmb_vision_mode.addItem("🧩 json_descriptor — 純 JSON 空間描述元 + BBox", "json_descriptor")
+        self.cmb_vision_mode.addItem("🔤 en_compact — 英文 Key-Value 精簡描述元", "en_compact")
+        self.cmb_vision_mode.addItem("📐 raster — Z 字象限方向性掃描", "raster")
+        self.cmb_vision_mode.setCurrentIndex(1)
+        vision_btn_row2.addWidget(self.cmb_vision_mode, stretch=1)
+
+        self.lbl_vision_info = QLabel("📎 尚未附加圖片")
+        self.lbl_vision_info.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        vision_btn_row2.addWidget(self.lbl_vision_info)
+        vision_ctrl_v.addLayout(vision_btn_row2)
+
+        vision_h.addLayout(vision_ctrl_v, stretch=1)
+
+        self.lbl_vision_thumb = QLabel("🖼️ 縮圖預覽")
+        self.lbl_vision_thumb.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_vision_thumb.setFixedSize(116, 78)
+        self.lbl_vision_thumb.setStyleSheet("background-color: #020617; border: 1px solid #475569; border-radius: 4px; color: #64748b; font-size: 10px;")
+        vision_h.addWidget(self.lbl_vision_thumb)
+        chat_v.addWidget(vision_frame)
+
         input_row = QHBoxLayout()
         self.inp_prompt = MultiLinePromptInput()
         self.inp_prompt.setFixedHeight(84)
@@ -1105,36 +1199,129 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         splitter.addWidget(right_splitter)
         splitter.setSizes([560, 980])
 
+    def _load_initial_active_profile(self) -> None:
+        cfg_path = BASE_DIR / "configs" / "model_profiles.json"
+        if not cfg_path.exists():
+            return
+        try:
+            data = json.loads(cfg_path.read_text(encoding="utf-8"))
+            act = str(data.get("active_profile") or "thor_31b")
+            profs = data.get("profiles", {})
+            if act in profs:
+                self._current_profile_key = act
+                self.cmb_profile.blockSignals(True)
+                if self.cmb_profile.findText(act) < 0:
+                    self.cmb_profile.addItem(act)
+                self.cmb_profile.setCurrentText(act)
+                self.cmb_profile.blockSignals(False)
+                p = profs[act]
+                self.inp_url.setText(str(p.get("server_url", "http://192.168.50.67:8000")))
+                self.inp_model.setText(str(p.get("model_id", "Gemma-4-31B-IT-NVFP4")))
+                hyper = p.get("hyperparameters", {})
+                if hyper.get("temperature") is not None:
+                    self.spn_temp.setValue(float(hyper["temperature"]))
+        except Exception:
+            pass
+
+    def _persist_profile_config(self, target_profile: str, force: bool = False) -> bool:
+        """
+        Saves `server_url`, `model_id`, and hyperparameters to `configs/model_profiles.json`
+        whenever `server_url` or `model_id` changed (or when `[💾 存設定]` is clicked with `force=True`).
+        """
+        if not target_profile:
+            return False
+        cfg_path = BASE_DIR / "configs" / "model_profiles.json"
+        try:
+            data = json.loads(cfg_path.read_text(encoding="utf-8")) if cfg_path.exists() else {"profiles": {}}
+        except Exception:
+            data = {"profiles": {}}
+
+        profs = data.setdefault("profiles", {})
+        entry = profs.setdefault(target_profile, {})
+        new_url = self.inp_url.text().strip()
+        new_mdl = self.inp_model.text().strip()
+        old_url = str(entry.get("server_url", ""))
+        old_mdl = str(entry.get("model_id", ""))
+        active_changed = data.get("active_profile") != self.cmb_profile.currentText()
+
+        if not force and (new_url == old_url and new_mdl == old_mdl and not active_changed):
+            return False
+
+        if new_url:
+            entry["server_url"] = new_url
+        if new_mdl:
+            entry["model_id"] = new_mdl
+        entry["shy_lambda"] = float(self.spn_shy.value())
+        hyper = entry.setdefault("hyperparameters", {})
+        hyper["max_generation_tokens"] = int(self.spn_max_toks.value())
+        hyper["temperature"] = float(self.spn_temp.value())
+        data["active_profile"] = self.cmb_profile.currentText()
+
+        cfg_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        if hasattr(self, "lbl_conn_status"):
+            self.lbl_conn_status.setText(
+                f"💾 已自動儲存 Profile [{target_profile}] 設定 (URL={new_url} | Model={new_mdl})"
+            )
+        return True
+
     def _on_profile_changed(self, prof_name: str) -> None:
+        # 1. Auto-save previous profile if Server URL or Model ID was modified before switching!
+        if getattr(self, "_current_profile_key", "") and self._current_profile_key != prof_name:
+            self._persist_profile_config(self._current_profile_key, force=False)
+        self._current_profile_key = prof_name
+
         prof = load_profile_config(str(BASE_DIR / "configs/model_profiles.json"), prof_name)
         if prof_name == "rtx5080_bolt_e4b_gguf":
-            self.inp_url.setText("http://127.0.0.1:8001")
-            self.inp_model.setText("nemotron-bolt")
-            self.spn_temp.setValue(1.0)
+            self.inp_url.setText(prof.get("server_url", "http://127.0.0.1:8001"))
+            self.inp_model.setText(prof.get("model_id", "nemotron-bolt"))
+            self.spn_temp.setValue(float(prof.get("hyperparameters", {}).get("temperature", 1.0)))
+        elif prof_name == "thor_bolt_e4b":
+            self.inp_url.setText(prof.get("server_url", "http://192.168.50.67:8000"))
+            self.inp_model.setText(prof.get("model_id", "NVIDIA-Nemotron-3.5-Bolt-E4B-BF16"))
+            self.spn_temp.setValue(float(prof.get("hyperparameters", {}).get("temperature", 0.4)))
+            self._auto_probe_server_model(sync_profile_combo=False)
         else:
             self.inp_url.setText(prof.get("server_url", "http://192.168.50.67:8000"))
             self.inp_model.setText(prof.get("model_id", "Gemma-4-31B-IT-NVFP4"))
-            self.spn_temp.setValue(0.6)
-            self._auto_probe_server_model()
+            self.spn_temp.setValue(float(prof.get("hyperparameters", {}).get("temperature", 0.6)))
+            self._auto_probe_server_model(sync_profile_combo=False)
 
-    def _auto_probe_server_model(self) -> None:
-        """Automatically queries `/health` or `/v1/models` on the server so Model ID never mismatches (fixes HTTP 404)!"""
+        self._persist_profile_config(prof_name, force=False)
+        # Immediately re-bind checkpoint manager (`latest_<prof>_16lora.safetensors`) & session logger!
+        self.init_engine_from_ui(reset_ckpt=False, resume_sess=self.chk_resume.isChecked(), auto_sync_profile=False)
+
+    def _auto_probe_server_model(self, sync_profile_combo: bool = True) -> None:
+        """Automatically queries `/health` or `/v1/models` on the server and syncs Profile & SafeTensors checkpoint key!"""
         url = self.inp_url.text().strip().rstrip("/")
-        for ep in ("/health", "/v1/models"):
+        detected_mid = ""
+        for ep in ("/v1/models", "/health"):
             try:
                 req = urllib.request.Request(f"{url}{ep}", headers={"User-Agent": "Kuro-PyQt-GUI/1.0"}, method="GET")
                 with urllib.request.urlopen(req, timeout=2.5) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
-                    if ep == "/health" and data.get("model"):
-                        self.inp_model.setText(str(data["model"]))
-                        return
                     if ep == "/v1/models" and isinstance(data.get("data"), list) and data["data"]:
                         mid = data["data"][0].get("id")
                         if mid:
-                            self.inp_model.setText(str(mid))
-                            return
+                            detected_mid = str(mid)
+                            break
+                    if ep == "/health" and data.get("model"):
+                        detected_mid = str(data["model"])
+                        break
             except Exception:
                 continue
+        if detected_mid:
+            self.inp_model.setText(detected_mid)
+            if sync_profile_combo and hasattr(self, "cmb_profile"):
+                low = detected_mid.lower()
+                cur_p = self.cmb_profile.currentText()
+                if ("bolt" in low or "e4b" in low) and cur_p in ("thor_31b", "thor_31bnvfp4"):
+                    self.cmb_profile.blockSignals(True)
+                    self.cmb_profile.setCurrentText("thor_bolt_e4b")
+                    self.cmb_profile.blockSignals(False)
+                elif "31b" in low and cur_p == "thor_bolt_e4b":
+                    self.cmb_profile.blockSignals(True)
+                    self.cmb_profile.setCurrentText("thor_31b")
+                    self.cmb_profile.blockSignals(False)
 
     def _refresh_session_ComboBox(self, current_jsonl: str = "") -> None:
         prev_val = self.cmb_resume_target.currentData()
@@ -1213,8 +1400,13 @@ class LocalSleepMoETacticalWindow(QMainWindow):
                 self.cmb_core_engine.setCurrentIndex(idx)
         self.cmb_core_engine.blockSignals(False)
 
-    def init_engine_from_ui(self, reset_ckpt: bool = False, resume_sess: bool = True) -> None:
-        self._auto_probe_server_model()
+    def init_engine_from_ui(
+        self,
+        reset_ckpt: bool = False,
+        resume_sess: bool = True,
+        auto_sync_profile: bool = True,
+    ) -> None:
+        self._auto_probe_server_model(sync_profile_combo=auto_sync_profile)
         prof_name = self.cmb_profile.currentText()
         prof = load_profile_config(str(BASE_DIR / "configs/model_profiles.json"), prof_name)
         prof["shy_lambda"] = float(self.spn_shy.value())
@@ -1422,8 +1614,64 @@ class LocalSleepMoETacticalWindow(QMainWindow):
             self.hybrid_engine.push_live_vram_gate_async(enabled=False, alpha=0.0)
             self.lbl_conn_status.setText("⚪ [熱插拔切換] 模式0：純觀測伴隨模式 (已瞬時關閉所有 Logit 注入！)")
 
+    def _on_upload_vision_images(self) -> None:
+        files, _ = QFileDialog.getOpenFileNames(
+            self, "選擇要上傳推論的圖片 (可多選 1~3 張)", str(BASE_DIR), "Images (*.jpg *.jpeg *.png *.webp *.bmp)"
+        )
+        if not files:
+            return
+        self.attached_images = [Path(f) for f in files if Path(f).is_file()]
+        self._update_vision_attachment_ui()
+
+    def _on_load_demo_vision_image(self) -> None:
+        out_dir = BASE_DIR / "exports" / "vision_tests"
+        suite = generate_synthetic_directional_suite(out_dir)
+        if suite:
+            self.attached_images = [suite[0]]
+            self._update_vision_attachment_ui()
+
+    def _on_clear_vision_images(self) -> None:
+        self.attached_images.clear()
+        self.lbl_vision_info.setText("📎 尚未附加圖片")
+        self.lbl_vision_thumb.setPixmap(QPixmap())
+        self.lbl_vision_thumb.setText("🖼️ 縮圖預覽")
+
+    def _update_vision_attachment_ui(self) -> None:
+        if not self.attached_images:
+            self._on_clear_vision_images()
+            return
+        names = ", ".join(p.name for p in self.attached_images)
+        self.lbl_vision_info.setText(f"📎 已附 {len(self.attached_images)} 張: {names[:28]}")
+        self.last_result_image_path = self.attached_images[-1]
+        self.btn_download_img.setEnabled(True)
+        pix = QPixmap(str(self.attached_images[-1]))
+        if not pix.isNull():
+            self.lbl_vision_thumb.setPixmap(
+                pix.scaled(112, 74, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            )
+
+    def _on_download_vision_image(self) -> None:
+        src = self.last_result_image_path or (self.attached_images[-1] if self.attached_images else None)
+        if not src or not src.exists():
+            return
+        dest, _ = QFileDialog.getSaveFileName(
+            self, "另存/下載視覺結果圖片", str(BASE_DIR / src.name), "JPEG/PNG (*.jpg *.png)"
+        )
+        if dest:
+            shutil.copy2(str(src), str(dest))
+            self.lbl_conn_status.setText(f"💾 已將影像另存至: {dest}")
+
     def send_prompt(self) -> None:
         prompt = self.inp_prompt.toPlainText().strip()
+        v_mode = str(self.cmb_vision_mode.currentData() or "free")
+        if self.attached_images and not prompt:
+            prompt = DIRECTIONAL_PROMPTS.get(
+                v_mode if v_mode != "free" else "json_bbox",
+                DIRECTIONAL_PROMPTS["json_bbox"],
+            )
+        elif self.attached_images and v_mode != "free":
+            prompt = DIRECTIONAL_PROMPTS.get(v_mode, prompt) + "\n" + prompt
+
         if not prompt or self.hybrid_engine is None:
             return
         if self.worker and self.worker.isRunning():
@@ -1438,17 +1686,20 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         self._auto_probe_server_model()
         self.hybrid_engine.model_id = self.inp_model.text().strip()
 
+        img_tag = f" [🖼️ 附圖: {', '.join(p.name for p in self.attached_images)}]" if self.attached_images else ""
         self.inp_prompt.clear()
         self.btn_send.setEnabled(False)
         self.btn_stop.setEnabled(True)
-        self.txt_chat.appendPlainText(f"\nLeon >> {prompt}\nKuro >> ")
+        self.txt_chat.appendPlainText(f"\nLeon{img_tag} >> {prompt}\nKuro ({self.hybrid_engine.model_id}) >> ")
 
+        self._active_turn_images = list(self.attached_images)
         self.worker = StreamInferenceWorker(
             engine=self.hybrid_engine,
             session_logger=self.session_logger,
             user_prompt=prompt,
             system_inst=self.system_prompt,
             conversation_history=self.conversation_history,
+            attached_images=self._active_turn_images,
         )
         self._pending_user_prompt = prompt
         self.worker.sig_token.connect(self._on_stream_token)
@@ -1475,9 +1726,22 @@ class LocalSleepMoETacticalWindow(QMainWindow):
 
     def _on_stream_finished(self, full_text: str, total_toks: int, elapsed: float, ttft_ms: float) -> None:
         tps = total_toks / max(0.001, elapsed)
+        bbox_note = ""
+        if getattr(self, "_active_turn_images", None):
+            bbox_img, bbox_list = parse_and_draw_bboxes(self._active_turn_images[-1], full_text)
+            if bbox_img and bbox_list:
+                self.last_result_image_path = bbox_img
+                self.btn_download_img.setEnabled(True)
+                bbox_note = f"\n🎯 [BBox 自動繪製完成] 共框出 {len(bbox_list)} 個目標 ➔ 已存檔 `{bbox_img}` (可點擊『💾 下載/另存結果圖』)"
+                pix = QPixmap(str(bbox_img))
+                if not pix.isNull():
+                    self.lbl_vision_thumb.setPixmap(
+                        pix.scaled(112, 74, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    )
         self.txt_chat.appendPlainText(
             f"\n----------------------------------------------------------------------\n"
             f"🏁 [Turn Complete] Tokens: {total_toks} | Speed: {tps:.2f} tok/s | TTFT: {ttft_ms:.1f} ms | Elapsed: {elapsed:.2f}s"
+            + bbox_note
         )
         self.conversation_history.append({"role": "user", "content": self._pending_user_prompt})
         self.conversation_history.append({"role": "assistant", "content": full_text})

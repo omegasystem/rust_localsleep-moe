@@ -303,6 +303,16 @@
           </select>
         </div>
         <div>
+          <label style="font-size:11px;color:var(--muted);display:block;">抽樣範圍 (防卡死加速):</label>
+          <select id="sel-series-sample" onchange="loadSeriesData()">
+            <option value="stride:48" selected>⚡ 全歷史均勻抽樣 48 幀 (極速秒開)</option>
+            <option value="recent:48">🔥 最近 48 幀 (最新演化細看)</option>
+            <option value="recent:96">📊 最近 96 幀</option>
+            <option value="stride:120">🌐 全歷史均勻抽樣 120 幀</option>
+            <option value="stride:0">📦 載入全部快照 (不抽樣)</option>
+          </select>
+        </div>
+        <div>
           <label style="font-size:11px;color:var(--muted);display:block;">顯微鏡追蹤專家:</label>
           <select id="sel-series-exp" onchange="loadSeriesData()">
             <option value="0">Expert #00</option>
@@ -319,6 +329,7 @@
           <button class="btn-primary" id="btn-series-play" onclick="toggleSeriesPlay()">▶️ 自動動態播放</button>
           <button onclick="stepSeriesFrame(-1)">⏮️ 上一幀</button>
           <button onclick="stepSeriesFrame(1)">⏭️ 下一幀</button>
+          <button onclick="exportRecent48Matrix()" style="background:#0f766e;color:#fff;border-color:#14b8a6;" title="導出最近 48 次快照的權重變化矩陣 (.npz / .csv / .json) 並統計熄滅神經元 (0.0) 復燃點亮次數">📥 導出 48 幀權重變化與復燃矩陣</button>
         </div>
         <div style="flex:1;min-width:260px;margin-top:10px;">
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--cyan);font-family:monospace;margin-bottom:4px;">
@@ -751,10 +762,38 @@
     let seriesCurIdx = 0;
     let seriesTimer = null;
 
+    async function exportRecent48Matrix() {
+      const prof = document.getElementById('sel-series-profile').value || 'thor_31b_16lora';
+      const sampleRaw = (document.getElementById('sel-series-sample')?.value || 'recent:48').split(':');
+      const smode = sampleRaw[0] || 'recent';
+      const maxF = parseInt(sampleRaw[1] || '48', 10) || 48;
+      document.getElementById('series-frame-label').textContent = '⏳ 正在導出 48 幀權重變化與突觸復燃分析矩陣...';
+      const res = await fetch(`/api/export_matrix?profile=${encodeURIComponent(prof)}&mode=${smode}&max_frames=${maxF}`);
+      const rep = await res.json();
+      if (rep.error) return alert('導出失敗: ' + rep.error);
+      const msg = [
+        `✅ 已成功導出 ${rep.frames_analyzed} 幀權重變化矩陣！`,
+        `• NumPy 矩陣檔 (.npz): ${rep.npz_file}`,
+        `• CSV 時序總表 (.csv): ${rep.csv_file}`,
+        `• JSON 診斷報告 (.json): ${rep.json_file}`,
+        ``,
+        `🔬 【熄滅神經元 (0.0 ➔ 非0) 復燃統計結果】：`,
+        `• 全域總復燃事件數 (0.0 ➔ !=0): ${rep.global_total_reignited_synapses} 次`,
+        `• 全域總熄滅事件數 (!=0 ➔ 0.0): ${rep.global_total_extinguished_synapses} 次`,
+        `• 平均每步 2:4 遮罩翻轉率 (Mask Flip %): ${rep.global_mean_mask_flip_pct}%`
+      ].join('\n');
+      alert(msg);
+      renderSeriesFrame(seriesCurIdx);
+    }
+
     async function loadSeriesData() {
-      const prof = document.getElementById('sel-series-profile').value || 'thor_31b';
+      const prof = document.getElementById('sel-series-profile').value || 'thor_31b_16lora';
       const exp = document.getElementById('sel-series-exp').value || '2';
-      const res = await fetch(`/api/series?profile=${encodeURIComponent(prof)}&expert=${exp}&col=0`);
+      const sampleRaw = (document.getElementById('sel-series-sample')?.value || 'stride:48').split(':');
+      const smode = sampleRaw[0] || 'stride';
+      const maxF = parseInt(sampleRaw[1] || '48', 10);
+      document.getElementById('series-frame-label').textContent = '⏳ 正在載入 16-LoRA 時間軸快照...';
+      const res = await fetch(`/api/series?profile=${encodeURIComponent(prof)}&expert=${exp}&col=0&mode=${smode}&max_frames=${maxF}`);
       const data = await res.json();
       if (data.error) return alert(data.error);
       seriesData = data;
@@ -795,8 +834,9 @@
       seriesCurIdx = Math.max(0, Math.min(frames.length - 1, idx));
       const cur = frames[seriesCurIdx];
 
+      const rawTotal = seriesData.total_raw_files || frames.length;
       document.getElementById('series-frame-label').textContent =
-        `Frame ${seriesCurIdx + 1} / ${frames.length} (Toks: ${cur.metadata.tokens_generated || 0})`;
+        `Frame ${seriesCurIdx + 1} / ${frames.length} (總快照庫: ${rawTotal} 檔 | Toks: ${cur.metadata.tokens_generated || 0})`;
       document.getElementById('series-file-label').textContent =
         `${cur.filename} [${(cur.metadata.timestamp || '').slice(0, 19)}]`;
 

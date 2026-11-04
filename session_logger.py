@@ -272,9 +272,12 @@ class SessionLogger:
                     target_jsonl = os.path.abspath(p)
                     break
         if not target_jsonl:
-            avail = [x["path"] for x in self.list_available_sessions() if self.profile in x["filename"]]
-            if not avail:
-                avail = [x["path"] for x in self.list_available_sessions()]
+            # Strict profile isolation: only resume sessions belonging to `self.profile`
+            avail = [
+                x["path"]
+                for x in self.list_available_sessions()
+                if x["filename"].startswith(f"session_{self.profile}_")
+            ]
             if avail:
                 offset_idx = 0
                 if session_spec and session_spec.startswith("latest-"):
