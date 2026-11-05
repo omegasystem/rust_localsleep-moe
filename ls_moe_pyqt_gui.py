@@ -458,6 +458,7 @@ class StreamInferenceWorker(QThread):
                     "gpu_24_prunes": self.engine.total_gpu_24_prunes,
                     "bifurcation_flips": getattr(self.engine, "_turn_bifurcation_flips", 0),
                     "total_bifurcation_flips": getattr(self.engine, "total_bifurcation_flips", 0),
+                    "expert_states": self.engine.rust_router.get_expert_states() if self.engine.rust_router is not None else [],
                 },
                 artifacts=saved_arts,
             )
@@ -1449,18 +1450,34 @@ class LocalSleepMoETacticalWindow(QMainWindow):
             session_dir=str(BASE_DIR / "sessions"),
             profile=prof_name,
         )
-        wm_injection, wm_prj = self.wm_mgr.build_system_prompt_injection()
+        # Always allocate a fresh timestamped project folder unless explicitly resuming a session!
+        prj_uuid = (
+            detected_prj
+            if (resume_sess and detected_prj)
+            else f"prj_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
+        )
+        isolated_dir = str(BASE_DIR / "isolated_output" / prj_uuid)
+        self._bootstrap_rust_sandbox_skeleton(Path(isolated_dir))
+
+        wm_injection, _ = self.wm_mgr.build_system_prompt_injection(current_sandbox_dir=isolated_dir)
         if self.chk_wm_inject.isChecked():
             self.system_prompt = self.system_prompt + wm_injection
 
-        prj_uuid = detected_prj or wm_prj or f"prj_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}"
-        isolated_dir = str(BASE_DIR / "isolated_output" / prj_uuid)
         self.harness = EmbodiedToolHarness(
             workspace_root=str(BASE_DIR),
             isolated_output_dir=isolated_dir,
             session_logger=self.session_logger,
             working_memory_mgr=self.wm_mgr,
         )
+        if getattr(self.session_logger, "vault_db", None) is not None:
+            try:
+                self.session_logger.vault_db.register_session(
+                    server_url=server_url,
+                    active_cube_id=str(loaded_cube_tag),
+                    sandbox_dir=isolated_dir,
+                )
+            except Exception:
+                pass
 
         dummy_args = DummyArgs(
             profile=prof_name,
@@ -1541,6 +1558,49 @@ class LocalSleepMoETacticalWindow(QMainWindow):
             f"======================================================================\n"
             f"{md_text[:1800]}\n...(完整內容已寫入 sessions/working_memory_{prof_name}.md)...\n"
         )
+
+    @staticmethod
+    def _bootstrap_rust_sandbox_skeleton(sandbox_path: Path) -> None:
+        """
+        Ensures every fresh timestamped sandbox (`isolated_output/prj_YYYYMMDD_HHMMSS_<hash>`)
+        has its own `src/` directory and golden-anchor `Cargo.toml` + `.cargo/config.toml`
+        so `cargo check` / `cargo build --release` works out-of-the-box without touching older projects!
+        """
+        try:
+            (sandbox_path / "src").mkdir(parents=True, exist_ok=True)
+            cargo_toml = sandbox_path / "Cargo.toml"
+            if not cargo_toml.exists():
+                cargo_toml.write_text(
+                    '[package]\n'
+                    'name = "ntm_rsi_core"\n'
+                    'version = "0.1.0"\n'
+                    'edition = "2021"\n\n'
+                    '[lib]\n'
+                    'name = "ntm_rsi_core"\n'
+                    'crate-type = ["cdylib"]\n\n'
+                    '# 【黃金相容錨點 (Version Anchors)】：\n'
+                    '# 請保持 pyo3 = "0.20", numpy = "0.20", ndarray = "0.15" 三者版本配對。\n'
+                    '[dependencies]\n'
+                    'pyo3 = { version = "0.20", features = ["extension-module"] }\n'
+                    'numpy = "0.20"\n'
+                    'ndarray = { version = "0.15", features = ["rayon"] }\n'
+                    'rand = "0.8"\n'
+                    'rayon = "1.8"\n'
+                    'parking_lot = "0.12"\n'
+                    'smallvec = "1.13"\n'
+                    'rustc-hash = "1.1"\n'
+                    'serde = { version = "1.0", features = ["derive"] }\n',
+                    encoding="utf-8",
+                )
+            # Symlink or share target cache / Cargo.lock from template if available for instant offline compile
+            tmpl_lock = BASE_DIR / "isolated_output" / "prj_20261030_220710_3f6f5c57" / "Cargo.lock"
+            if tmpl_lock.exists() and not (sandbox_path / "Cargo.lock").exists():
+                shutil.copy2(str(tmpl_lock), str(sandbox_path / "Cargo.lock"))
+            tmpl_cargo_cfg = BASE_DIR / "isolated_output" / "prj_20261030_220710_3f6f5c57" / ".cargo"
+            if tmpl_cargo_cfg.exists() and not (sandbox_path / ".cargo").exists():
+                shutil.copytree(str(tmpl_cargo_cfg), str(sandbox_path / ".cargo"))
+        except Exception:
+            pass
 
     def _manual_save_snapshot(self) -> None:
         if self.ckpt_mgr and self.rust_router:

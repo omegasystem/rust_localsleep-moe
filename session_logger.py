@@ -4,11 +4,17 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
+try:
+    from localsleep_telemetry_db import LocalSleepTelemetryVaultDB
+except Exception:
+    LocalSleepTelemetryVaultDB = None
+
 
 class SessionLogger:
     """
     通用型 Session Archiving, Markdown Turn Logger 與累計效能見證紀錄器 (Optimization Witness Logger)。
-    自動保留每次推論的完整內容、速度指標 (`🏁 [Hybrid Turn Complete] ...`) 與 Rust MoE 專家狀態 (`🦀 [Rust MoE Telemetry] ...`)。
+    自動保留每次推論的完整內容、速度指標 (`🏁 [Hybrid Turn Complete] ...`) 與 Rust MoE 專家狀態 (`🦀 [Rust MoE Telemetry] ...`)，
+    並同步寫入戴森球同款雙軌遙測 (`telemetry_<session_id>.jsonl` + `_chart.html`) 與 Append-Only SQLite WAL 黑盒子 (`localsleep_telemetry_vault.db`)。
     """
     def __init__(self, session_dir="./sessions", profile="default", model_path="", benchmark_dir="./benchmarks"):
         self.session_dir = os.path.abspath(session_dir)
@@ -17,6 +23,7 @@ class SessionLogger:
         os.makedirs(self.benchmark_dir, exist_ok=True)
         self.profile = profile
         self.model_path = model_path
+        self._last_user_prompt = ""
 
         session_ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.session_id = f"{profile}_{session_ts}"
@@ -26,6 +33,19 @@ class SessionLogger:
         self._rt_step = 0
         self.witness_md = os.path.join(self.benchmark_dir, "OPTIMIZATION_WITNESS_LOG.md")
         self.witness_jsonl = os.path.join(self.benchmark_dir, "optimization_witness_history.jsonl")
+
+        self.vault_db: Optional[Any] = None
+        if LocalSleepTelemetryVaultDB is not None:
+            try:
+                self.vault_db = LocalSleepTelemetryVaultDB(
+                    session_dir=self.session_dir,
+                    session_id=self.session_id,
+                    profile_id=self.profile,
+                    model_id=self.model_path,
+                    md_path=self.md_file,
+                )
+            except Exception as e:
+                print(f"[Warning] Failed to init LocalSleepTelemetryVaultDB: {e}")
 
         self._init_logs()
 
@@ -94,6 +114,21 @@ class SessionLogger:
         }
         with open(self.realtime_telemetry_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+        if self.vault_db is not None:
+            try:
+                self.vault_db.buffer_token_step(
+                    token_step=self._rt_step,
+                    token_id=int(token_id),
+                    token_str=str(token_str),
+                    tps=float(tps),
+                    entropy=float(entropy),
+                    selected_experts=[int(x) for x in selected_experts],
+                    weights=[float(w) for w in weights],
+                    expert_states=exps_formatted,
+                )
+            except Exception:
+                pass
 
     def append_turn(
         self,
@@ -206,6 +241,24 @@ class SessionLogger:
             "artifacts": artifacts or [],
             "artifacts_count": len(artifacts) if artifacts else 0,
         })
+
+        if role == "user":
+            self._last_user_prompt = content
+            if self.vault_db is not None:
+                try:
+                    self.vault_db.set_pending_user_prompt(content)
+                except Exception:
+                    pass
+        elif role == "assistant" and self.vault_db is not None:
+            try:
+                self.vault_db.commit_turn(
+                    user_prompt=self._last_user_prompt,
+                    assistant_raw_text=content,
+                    stats=stats or {},
+                    artifacts=artifacts or [],
+                )
+            except Exception as e:
+                print(f"[Warning] Vault DB commit_turn error: {e}")
 
     def list_available_sessions(self) -> List[Dict[str, Any]]:
         """

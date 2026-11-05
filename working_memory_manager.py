@@ -113,9 +113,9 @@ class WorkingMemoryManager:
         skeleton signatures, and key code preview.
         """
         target_dir = os.path.abspath(sandbox_dir) if sandbox_dir else ""
+        # Always strip old prj_* prefix from artifact keys so prompt injection uses clean relative paths (e.g. `src/lib.rs`)
+        # bound to whichever new timestamped `prj_YYYYMMDD_HHMMSS` sandbox is currently active!
         iso_root = os.path.join(self.workspace_root, "isolated_output")
-
-        # If current sandbox has no files yet, find the most recent populated sandbox
         if (not target_dir or not os.path.exists(target_dir) or not self._list_files_recursive(target_dir)) and os.path.exists(iso_root):
             cands = sorted(
                 [p for p in Path(iso_root).glob("prj_*") if p.is_dir() and any(p.rglob("*.*"))],
@@ -140,7 +140,7 @@ class WorkingMemoryManager:
                 fpath = os.path.join(root, fname)
                 if os.path.getsize(fpath) > 65536:
                     continue
-                rel_path = os.path.relpath(fpath, self.workspace_root).replace("\\", "/")
+                rel_path = os.path.relpath(fpath, target_dir).replace("\\", "/")
                 try:
                     with open(fpath, "r", encoding="utf-8", errors="replace") as f:
                         code_txt = f.read()

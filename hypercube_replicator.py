@@ -896,6 +896,48 @@ try:
                         swapped, swap_msg = self.replicator.rotate_hypercube_dimension(cube_id)
                         verify_out = verify_out + "\n\n" + swap_msg
 
+                    # Record Hypercube Evolution Stage & Offspring Code into SQLite WAL Blackbox (`localsleep_telemetry_vault.db`)
+                    try:
+                        from localsleep_telemetry_db import LocalSleepTelemetryVaultDB
+                        vault = LocalSleepTelemetryVaultDB(
+                            session_dir=os.path.join(self.replicator.workspace_root, "sessions"),
+                            session_id=f"hypercube_{cube_id}",
+                            profile_id="hypercube_evo",
+                            model_id=self.model_id,
+                            server_url=self.server_url,
+                            active_cube_id=cube_id,
+                            sandbox_dir=cube_dir,
+                        )
+                        for fname in ("evolved_router_plugin.py", "evolved_subagent_core.py", "evolved_homeostasis.py", "DEV_NOTES.md", "GOALS.json"):
+                            fpath = os.path.join(cube_dir, fname)
+                            if os.path.exists(fpath):
+                                vault.record_artifact_version(
+                                    sandbox_rel_path=f"{cube_id}/{fname}",
+                                    content_text=Path(fpath).read_text(encoding="utf-8", errors="replace"),
+                                    cube_id=cube_id,
+                                    turn_id=cycle_idx,
+                                )
+                        vault.record_hypercube_stage(
+                            cube_id=cube_id,
+                            parent_cube_id=str(cube_meta.get("parent_cube_id", "gen_000_origin")),
+                            stage_num=int(cube_meta.get("generation_index", cycle_idx)),
+                            stage_name=f"Hypercube Cycle #{cycle_idx} ({cube_id})",
+                            steer_prompt="; ".join(steer_list) if steer_list else "",
+                            hypothesis_notes=str(note2)[:4000],
+                            compile_attempts=1,
+                            orthogonality_error=float(l2_rep.get("orthogonality_error", 0.0)),
+                            sparsity_pct=50.0,
+                            l2_canary_tps=float(l2_rep.get("evolved_tps", 0.0) or 0.0),
+                            tps_gain_ratio=float(l2_rep.get("tps_gain_ratio", 1.0) or 1.0),
+                            fatigue_reduction_pct=float(l2_rep.get("fatigue_reduction_pct", 0.0) or 0.0),
+                            dispersion_entropy_gain_pct=float(l2_rep.get("dispersion_entropy_gain_pct", 0.0) or 0.0),
+                            lora_fatigue_16=exam_rep.get("final_fatigue_scores") or [],
+                            verified_ok=bool(ok),
+                            summary_text=verify_out[:4000],
+                        )
+                    except Exception as e_vault:
+                        print(f"[Warning] Hypercube Vault DB logging error: {e_vault}")
+
                     self.sig_stage_update.emit(
                         4,
                         f"{'✅ Stage 4 俄羅斯娃娃雙層驗證通過' if ok else '❌ Stage 4 驗證失敗'} [{cube_id}]",

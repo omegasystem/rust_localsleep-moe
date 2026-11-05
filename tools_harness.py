@@ -59,13 +59,21 @@ class EmbodiedToolHarness:
         if not clean_path or clean_path == ".":
             return self.isolated_output_dir
 
-        # 1. If path explicitly starts with isolated_output/prj_..., resolve from workspace_root
+        # 1. If path explicitly starts with isolated_output/prj_..., redirect to current active isolated_output_dir
+        #    unless the relative file doesn't exist in active sandbox yet (read-only fallback).
         if clean_path.startswith("isolated_output/") or clean_path.startswith("isolated_output\\"):
+            parts = clean_path.replace("\\", "/").split("/")
+            if len(parts) >= 3 and parts[1].startswith("prj_"):
+                rel_inside = "/".join(parts[2:])
+            else:
+                rel_inside = "/".join(parts[1:])
+            cand_active = os.path.abspath(os.path.join(self.isolated_output_dir, rel_inside))
+            if os.path.exists(cand_active):
+                return cand_active
             cand_ws = os.path.abspath(os.path.join(self.workspace_root, clean_path))
             if os.path.exists(cand_ws):
                 return cand_ws
-            sub_path = clean_path[len("isolated_output/"):].lstrip("/\\")
-            return os.path.abspath(os.path.join(self.isolated_output_dir, sub_path))
+            return cand_active
 
         # 2. Check active isolated sandbox first (so relative paths like `src/lib.rs` or `ntm_rsi_engine.py` hit sandbox!)
         cand_sandbox = os.path.abspath(os.path.join(self.isolated_output_dir, clean_path))
@@ -500,6 +508,21 @@ class EmbodiedToolHarness:
 
             stdout_str = (proc.stdout or "").strip()
             stderr_str = (proc.stderr or "").strip()
+            rel_cwd = os.path.relpath(target_cwd, self.workspace_root)
+
+            # Record 100% unfolded STDOUT & STDERR into SQLite WAL Blackbox before any truncation!
+            if self.session_logger is not None and getattr(self.session_logger, "vault_db", None) is not None:
+                try:
+                    self.session_logger.vault_db.record_sandbox_exec(
+                        command=cmd_str,
+                        cwd=rel_cwd,
+                        exit_code=proc.returncode,
+                        stdout_full=stdout_str,
+                        stderr_full=stderr_str,
+                    )
+                except Exception:
+                    pass
+
             combined = ""
             if stdout_str:
                 combined += f"[STDOUT]:\n{stdout_str}\n"
@@ -511,7 +534,6 @@ class EmbodiedToolHarness:
             if len(combined) > 6000:
                 combined = combined[:3000] + "\n... [Middle output truncated for KV Cache safety] ...\n" + combined[-2800:]
 
-            rel_cwd = os.path.relpath(target_cwd, self.workspace_root)
             return (
                 f"--- [SANDBOX SHELL EXEC | CWD: {rel_cwd} | CMD: `{cmd_str}` | EXIT_CODE: {proc.returncode}] ---\n"
                 f"{combined}"
@@ -528,6 +550,14 @@ class EmbodiedToolHarness:
             with open(target, "w", encoding="utf-8") as f:
                 f.write(content)
             rel_path = os.path.relpath(target, self.workspace_root)
+            if self.session_logger is not None and getattr(self.session_logger, "vault_db", None) is not None:
+                try:
+                    self.session_logger.vault_db.record_artifact_version(
+                        sandbox_rel_path=rel_path,
+                        content_text=content,
+                    )
+                except Exception:
+                    pass
             return f"[Success: Wrote {len(content)} bytes to isolated sandbox: {rel_path}]"
         except Exception as e:
             return f"[Error writing {path}: {e}]"
@@ -824,6 +854,15 @@ class EmbodiedToolHarness:
                     f.write(clean_content)
 
                 rel_path = os.path.relpath(full_path, self.workspace_root)
+                if self.session_logger is not None and getattr(self.session_logger, "vault_db", None) is not None:
+                    try:
+                        self.session_logger.vault_db.record_artifact_version(
+                            sandbox_rel_path=rel_path,
+                            content_text=clean_content,
+                            inline_edits=inline_edits,
+                        )
+                    except Exception:
+                        pass
                 saved_artifacts.append({
                     "path": full_path,
                     "rel_path": rel_path,
