@@ -79,3 +79,32 @@
   * **載入演化快照後重測**：靠著 16-LoRA 透過 `live_gate` 注入的突觸偏置，模型在第 1 次生成時直接避開陷阱，**One-Shot 一次滿分通過（`EXIT_CODE: 0`，耗時僅 `168s`、`2,534` tokens，立省 38% 算力與近 90 秒）**！
 * **原生 60 FPS 突觸顯微鏡 (`ls_moe_pyqt_gui.py` & `snapshot_studio.html`)**：
   提供純 GPU 光柵化的 PyQt6 桌面戰術儀表板與 3D Web 工作臺，可即時觀測 16 顆專家的腦波瀑布圖（EEG Waterfall）、2:4 稀疏棋盤格與跨專家正交矩陣。
+
+---
+
+## 4. 遠端 Web 控制台與 OpenAI 相容閘道 (`:18935`, `ls_moe_web_ui.py`)
+
+* **雙棲啟動**：啟動桌面版 `ls_moe_pyqt_gui.py` 時會自動於背景掛載 `0.0.0.0:18935` 伺服器；亦可透過 `./run_web_ui.sh` 獨立無頭運行。
+* **標準 OpenAI 介面 (`GET /v1/models`, `POST /v1/chat/completions`)**：
+  * 支援外部 Agent、IDE、或長篇分形鍛造腳本（如 `gits_50k_fractal_forge.py`、`gits_v3_negative_palindrome_forge.py`、`call_localsleep_coder.py`）直接以標準 OpenAI 協定調用 `Gemma-4-31B + gen_022 16-LoRA`。
+  * **動態 Context 天花板保護 (`Dynamic Context Ceiling Guard`)**：自動估算輸入 Prompt Token 數，動態將單輪 `max_tokens` 限制於 `20000 - est_input_toks` 安全範圍內，並支援 `"stateless_forge": true` 免歷史堆積旗標，徹底根除長文本生成觸碰 TRT 24K 上限導致的章節尾端斷裂。
+* **負面迴文抑制引擎 (`Negative Palindrome Constraint Engine`)**：
+  * 於長篇生成或連續演化中，自動掃描前序滑動視窗之高頻過飽和詞彙與句尾慣性，注入 Prompt 頭 `[-C]` 與尾 `[-C^R]` 對稱負向約束鎖，並遮罩 80% 快取視窗中的重複意象，消除長程同質性微震盪。
+
+---
+
+## 5. `SOMA-Fishbowl` 數位魚缸沙箱與後 AI 時代 OS 基座 (`:18940`)
+
+為使 `rust_localsleep-moe` 能與作業系統底層硬體直接耦合並自主演化系統器官，專案內建 **`SOMA-Fishbowl`** (`localsleep_fishbowl.py` + `fishbowl_pyqt_gui.py` + `soma_os_palindrome_loop.py`)：
+
+1. **去文字化空間張量畫布 (`1024×768 RGBA8888 /dev/fb0`)**：
+   * 虛擬 Framebuffer 位於 `fishbowl/rootfs/dev/fb0_rgba.raw`，由獨立 PyQt6 視窗 (`run_fishbowl.sh`) 以 15 FPS 即時渲染，並透過 `:18940/api/screen.png` 對外提供零延遲視覺截圖。
+2. **64KB 8 通道共享記憶體匯流排 (`/dev/mem_channels/devmem_arena.bin`, `CH0..CH7`)**：
+   * 每個 8KB 通道包含 `SOMA` Magic、`seq: u32` 寫入計數器、`reg_u64: u64` 64-bit 狀態暫存器（於畫面上直接渲染為 32 格二進位位元平面 `Bitplane Matrix`）、32-byte `tag` 與 8144-byte `payload`。
+   * 內建原生 Rust 工具 `/bin/soma_devmem` 與 HTTP 端點 `GET/POST :18940/api/devmem`，讓外部 AI 可直接讀寫內部 RAM 通道並即時連動畫面。
+3. **動態配置熱更新合成器 (`soma_compositor_v3`) × `SOMA-GPUI` 宣告式分欄引擎 (`RUST_SOMA_GPUI_SDK`)**：
+   * **`soma_compositor_v3`**：每 `80ms` 自動熱載入 `/etc/soma_ui_config.json` (`.cfg`)，具備 `cpu_max_cores >= 24` (`8×3` 核心矩陣) 單調防退化鎖，免重編譯即可動態調整介面。
+   * **`SOMA-GPUI` (`--mode gpui-forge`)**：對標 `https://gpui.rs` (Zed / Discord Phoenix)，於純 `std` Rust 中實作 `div().flex().flex_row().flex_col().flex_grow().gap_3().border_1().child(...)` 自動 Flexbox 分欄解算器與 `RenderCtx::new(tick)`，兼具 GPUI 巢狀分欄彈性與 `rustc` `0.15 秒` 單檔極速編譯。
+4. **內部 Bash / Apps 控制與外部工具鏈掛載 (`/toolchain/bin/rustc` & Docker-FB 跳級)**：
+   * 自動將宿主機 `rustc` / `cargo` / `gcc` 映射入魚缸 `/toolchain/bin/`，外部 AI 可透過 `:18940/api/os/bash` 或 `soma_os_palindrome_loop.py --mode v3-control` 在 OS 內部 `/src/` 撰寫新 Rust 控制程式並編譯部署至 `/bin/`；亦提供 `fishbowl/run_docker_fishbowl.sh` 一鍵跳級至掛載共享 Framebuffer 與 DevMem 通道之 Docker 容器環境。
+
