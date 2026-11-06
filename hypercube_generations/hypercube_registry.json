@@ -1,8 +1,8 @@
 {
-  "active_cube_id": "gen_018_20261031_143847_matryoshka_L1",
-  "base_cube_id": "gen_010_20261031_140905_matryoshka_L1",
-  "active_cube_path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_018_20261031_143847_matryoshka_L1",
-  "last_rotation_at": "2026-10-31T14:39:51",
+  "active_cube_id": "gen_022_20261105_114610_matryoshka_L1",
+  "base_cube_id": "gen_022_20261105_114610_matryoshka_L1",
+  "active_cube_path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_022_20261105_114610_matryoshka_L1",
+  "last_rotation_at": "2026-11-05T14:47:17",
   "cubes": [
     {
       "cube_id": "gen_000_origin",
@@ -240,11 +240,62 @@
       "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_018_20261031_143847_matryoshka_L1",
       "rel_path": "hypercube_generations/gen_018_20261031_143847_matryoshka_L1",
       "created_at": "2026-10-31T14:38:47",
-      "status": "ACTIVE_EXECUTION_CUBE",
+      "status": "STANDBY_BASE_CUBE",
       "verified": true,
       "copied_files": 7,
       "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_018_20261031_143847_matryoshka_L1\", \"status\": \"PASS\", \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.019852, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
       "updated_at": "2026-10-31T14:39:34"
+    },
+    {
+      "cube_id": "gen_019_20261105_110950_matryoshka_L1",
+      "generation": 19,
+      "parent_cube_id": "gen_018_20261031_143847_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_019_20261105_110950_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_019_20261105_110950_matryoshka_L1",
+      "created_at": "2026-11-05T11:09:50",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 9,
+      "summary": "Verified PASS ([Warning] Rust ntm_rsi_core check fallback: dynamic module does not define module export function (PyInit_ntm_rsi_core))",
+      "updated_at": "2026-11-05T11:11:39"
+    },
+    {
+      "cube_id": "gen_020_20261105_112723_matryoshka_L1",
+      "generation": 20,
+      "parent_cube_id": "gen_019_20261105_110950_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_020_20261105_112723_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_020_20261105_112723_matryoshka_L1",
+      "created_at": "2026-11-05T11:27:23",
+      "status": "GESTATING",
+      "verified": false,
+      "copied_files": 9,
+      "summary": "Generation #20 Offspring Cube cloned from gen_019_20261105_110950_matryoshka_L1"
+    },
+    {
+      "cube_id": "gen_021_20261105_112950_matryoshka_L1",
+      "generation": 21,
+      "parent_cube_id": "gen_019_20261105_110950_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_021_20261105_112950_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_021_20261105_112950_matryoshka_L1",
+      "created_at": "2026-11-05T11:29:50",
+      "status": "STANDBY_BASE_CUBE",
+      "verified": true,
+      "copied_files": 9,
+      "summary": "Verified PASS ([Warning] Rust ntm_rsi_core check fallback: No module named 'ntm_rsi_core')",
+      "updated_at": "2026-11-05T11:32:33"
+    },
+    {
+      "cube_id": "gen_022_20261105_114610_matryoshka_L1",
+      "generation": 22,
+      "parent_cube_id": "gen_019_20261105_110950_matryoshka_L1",
+      "path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_022_20261105_114610_matryoshka_L1",
+      "rel_path": "hypercube_generations/gen_022_20261105_114610_matryoshka_L1",
+      "created_at": "2026-11-05T11:46:10",
+      "status": "ACTIVE_EXECUTION_CUBE",
+      "verified": true,
+      "copied_files": 9,
+      "summary": "Verified PASS (HYPERCUBE_VERIFY_REPORT:{\"cube_id\": \"gen_022_20261105_114610_matryoshka_L1\", \"status\": \"PASS\", \"rust_so_verified\": true, \"rust_fatigue_switch_iter\": 16, \"sparsity_pct\": 50.0, \"min_norm\": 1.5755, \"orthogonality_omega\": 0.0, \"lambda_high_ent\": 0.06107, \"lambda_low_ent\": 0.09578})",
+      "updated_at": "2026-11-05T11:48:54"
     }
   ],
   "rotation_history": [
@@ -345,6 +396,69 @@
       "new_active_cube": "gen_018_20261031_143847_matryoshka_L1",
       "new_base_cube": "gen_010_20261031_140905_matryoshka_L1",
       "previous_base_cube": "gen_014_20261031_142112_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-11-05T11:11:52",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "new_base_cube": "gen_018_20261031_143847_matryoshka_L1",
+      "previous_base_cube": "gen_010_20261031_140905_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-11-05T11:32:49",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_021_20261105_112950_matryoshka_L1",
+      "new_base_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "previous_base_cube": "gen_018_20261031_143847_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-11-05T03:37:28",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "new_base_cube": "gen_021_20261105_112950_matryoshka_L1",
+      "previous_base_cube": "gen_019_20261105_110950_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-11-05T11:46:03",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "new_base_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "previous_base_cube": "gen_021_20261105_112950_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-11-05T04:00:38",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "new_base_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "previous_base_cube": "gen_019_20261105_110950_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-11-05T04:38:27",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "new_base_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "previous_base_cube": "gen_019_20261105_110950_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-11-05T04:39:40",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "new_base_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "previous_base_cube": "gen_019_20261105_110950_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-11-05T06:09:02",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_022_20261105_114610_matryoshka_L1",
+      "new_base_cube": "gen_019_20261105_110950_matryoshka_L1",
+      "previous_base_cube": "gen_019_20261105_110950_matryoshka_L1"
+    },
+    {
+      "timestamp": "2026-11-05T14:47:17",
+      "action": "PROMOTE_OFFSPRING",
+      "new_active_cube": "gen_022_20261105_114610_matryoshka_L1",
+      "new_base_cube": "gen_022_20261105_114610_matryoshka_L1",
+      "previous_base_cube": "gen_019_20261105_110950_matryoshka_L1"
     }
   ]
 }

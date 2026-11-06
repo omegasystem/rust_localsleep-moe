@@ -1,0 +1,23 @@
+{
+  "fishbowl_root": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl",
+  "fb_device_path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/dev/fb0_rgba.raw",
+  "fb_resolution": "1024x768x32bpp (RGBA8888, 3,145,728 bytes)",
+  "devmem_arena_path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/dev/mem_channels/devmem_arena.bin",
+  "devmem_channels": "8 channels x 8192B (65,536 bytes)",
+  "ui_config_path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/etc/soma_ui_config.json",
+  "os_bin_dir": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/bin",
+  "os_src_dir": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src",
+  "os_toolchain_dir": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/toolchain/bin",
+  "docker_fb_launcher": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/run_docker_fishbowl.sh",
+  "compilers": {
+    "rustc": "/home/omegacd/.cargo/bin/rustc",
+    "cargo": "/home/omegacd/.cargo/bin/cargo",
+    "gcc": "/usr/bin/gcc"
+  },
+  "vm_backends": {
+    "linux_namespace_sandbox": true,
+    "docker_fb_bridge_script": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/run_docker_fishbowl.sh",
+    "qemu_aarch64": null,
+    "qemu_x86_64": null
+  }
+}

@@ -1,0 +1,229 @@
+{
+  "CompileErrors": [
+    {
+      "timestamp": "2026-11-06 11:03:29",
+      "organ": "soma_os_daemon_r4",
+      "error": "error[E0689]: can't call method `saturating_sub` on ambiguous numeric type `{integer}`\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_os_daemon_r4.rs:38:22\n   |\n38 |     let used = total.saturating_sub(avail);\n   |                      ^^^^^^^^^^^^^^\n   |\nhelp: you must specify a type for this binding, like `i32`\n   |\n29 |     let mut total: i32 = 0;\n   "
+    },
+    {
+      "timestamp": "2026-11-06 11:03:29",
+      "organ": "soma_os_daemon_r4",
+      "error": "error[E0689]: can't call method `saturating_sub` on ambiguous numeric type `{integer}`\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_os_daemon_r4.rs:38:22\n   |\n38 |     let used = total.saturating_sub(avail);\n   |                      ^^^^^^^^^^^^^^\n   |\nhelp: you must specify a type for this binding, like `i32`\n   |\n29 |     let mut total: i32 = 0;\n   "
+    },
+    {
+      "timestamp": "2026-11-06 11:07:46",
+      "organ": "soma_os_daemon_r1",
+      "error": "error[E0425]: cannot find value `mem_total` in this scope\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_os_daemon_r1.rs:53:9\n   |\n53 |         mem_total,\n   |         ^^^^^^^^^ not found in this scope\n\nerror: aborting due to 1 previous error\n\nFor more information about this error, try `rustc --explain E0425`."
+    },
+    {
+      "timestamp": "2026-11-06 11:07:46",
+      "organ": "soma_os_daemon_r1",
+      "error": "error[E0425]: cannot find value `mem_total` in this scope\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_os_daemon_r1.rs:53:9\n   |\n53 |         mem_total,\n   |         ^^^^^^^^^ not found in this scope\n\nerror: aborting due to 1 previous error\n\nFor more information about this error, try `rustc --explain E0425`."
+    },
+    {
+      "timestamp": "2026-11-06 11:11:55",
+      "organ": "soma_os_daemon_r1",
+      "error": "error[E0425]: cannot find value `mem_total` in this scope\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_os_daemon_r1.rs:53:9\n   |\n53 |         mem_total,\n   |         ^^^^^^^^^ not found in this scope\n\nerror: aborting due to 1 previous error\n\nFor more information about this error, try `rustc --explain E0425`."
+    },
+    {
+      "timestamp": "2026-11-06 11:11:55",
+      "organ": "soma_os_daemon_r1",
+      "error": "error[E0425]: cannot find value `mem_total` in this scope\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_os_daemon_r1.rs:53:9\n   |\n53 |         mem_total,\n   |         ^^^^^^^^^ not found in this scope\n\nerror: aborting due to 1 previous error\n\nFor more information about this error, try `rustc --explain E0425`."
+    },
+    {
+      "timestamp": "2026-11-06 11:17:40",
+      "organ": "soma_os_daemon_r1",
+      "error": "error[E0425]: cannot find value `mem_total` in this scope\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_os_daemon_r1.rs:53:9\n   |\n53 |         mem_total,\n   |         ^^^^^^^^^ not found in this scope\n\nerror: aborting due to 1 previous error\n\nFor more information about this error, try `rustc --explain E0425`."
+    },
+    {
+      "timestamp": "2026-11-06 11:17:40",
+      "organ": "soma_os_daemon_r1",
+      "error": "error[E0425]: cannot find value `mem_total` in this scope\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_os_daemon_r1.rs:53:9\n   |\n53 |         mem_total,\n   |         ^^^^^^^^^ not found in this scope\n\nerror: aborting due to 1 previous error\n\nFor more information about this error, try `rustc --explain E0425`."
+    },
+    {
+      "timestamp": "2026-11-06 11:56:00",
+      "organ": "soma_env_agent_r1",
+      "error": "error[E0034]: multiple applicable items in scope\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r1.rs:76:14\n   |\n76 |         self.read_exact_at(buf, offset)\n   |              ^^^^^^^^^^^^^ multiple `read_exact_at` found\n   |\nnote: candidate #1 is defined in an impl of the trait `FileExt` for the type `File`\n  --> /home/omegacd/.openclaw/wor"
+    },
+    {
+      "timestamp": "2026-11-06 11:57:29",
+      "organ": "soma_env_agent_r3",
+      "error": "error[E0599]: no method named `to_le_bytes` found for reference `&{integer}` in the current scope\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r3.rs:50:33\n   |\n50 |         file.write_all(&reg_val.to_le_bytes())?;\n   |                                 ^^^^^^^^^^^ method not found in `&{integer}`\n\nerror: aborting due to 1 previous error\n\nFor"
+    },
+    {
+      "timestamp": "2026-11-06 12:01:41",
+      "organ": "soma_env_agent_r2",
+      "error": "error[E0768]: no valid digits found for number\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r2.rs:29:46\n   |\n29 |         (4, \"CH4:SOMA_ENV_R2_LOAD\", load_1m, 0xSOMA_LOAD_SENSE),\n   |                                              ^^\n\nerror[E0768]: no valid digits found for number\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsl"
+    },
+    {
+      "timestamp": "2026-11-06 12:03:11",
+      "organ": "soma_env_agent_r3",
+      "error": "error[E0768]: no valid digits found for number\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r3.rs:30:66\n   |\n30 |         (4, \"CH4:SOMA_ENV_AGENT_R3\", loadavg.trim().to_string(), 0xSOMA_LOAD_SAMP),\n   |                                                                  ^^\n\nerror[E0768]: no valid digits found for number\n  --> /home/omegacd/.o"
+    },
+    {
+      "timestamp": "2026-11-06 12:04:33",
+      "organ": "soma_env_agent_r4",
+      "error": "error[E0768]: no valid digits found for number\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r4.rs:40:37\n   |\n40 |         (6, \"CH6:SOMA_ENV_R4_STAT\", 0xSOMA_SOMA, format!(\"CPU_STAT={}\", stat.lines().next().unwrap_or(\"N/A\").trim())),\n   |                                     ^^\n\nerror[E0768]: no valid digits found for number\n  --> /home/omeg"
+    },
+    {
+      "timestamp": "2026-11-06 12:05:28",
+      "organ": "soma_env_agent_r5",
+      "error": "error[E0382]: borrow of moved value: `loadavg`\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r5.rs:66:34\n   |\n13 |     let loadavg = read_proc_file(\"/proc/loadavg\");\n   |         ------- move occurs because `loadavg` has type `String`, which does not implement the `Copy` trait\n...\n29 |         (4, \"CH4:SOMA_ENV_AGENT_R5\", loadavg, 0x5041505"
+    },
+    {
+      "timestamp": "2026-11-06 12:07:05",
+      "organ": "soma_env_agent_r7",
+      "error": "error: invalid suffix `SOMA_R7_S7_S7_S7u64` for number literal\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r7.rs:16:38\n   |\n16 |         (4, \"CH4:SOMA_ENV_AGENT_R7\", 0x5SOMA_R7_S7_S7_S7u64 as u64, format!(\"LOAD: {}\", loadavg).trim().to_string()),\n   |                                      ^^^^^^^^^^^^^^^^^^^^^^ invalid suffix `SOMA_R7_S7_S"
+    },
+    {
+      "timestamp": "2026-11-06 12:09:05",
+      "organ": "soma_env_agent_r10",
+      "error": "error[E0382]: borrow of moved value: `loadavg`\n    --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r10.rs:71:33\n     |\n   8 |     let loadavg = read_to_string(\"/proc/loadavg\").unwrap_or_else(|_| \"0.0 0.0 0.0\".to_string());\n     |         ------- move occurs because `loadavg` has type `String`, which does not implement the `Copy` trait\n...\n  27 "
+    },
+    {
+      "timestamp": "2026-11-06 12:11:07",
+      "organ": "soma_env_agent_r13",
+      "error": "error[E0382]: borrow of moved value: `loadavg`\n    --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r13.rs:77:33\n     |\n   9 |     let loadavg = read_to_string(\"/proc/loadavg\").unwrap_or_else(|_| \"0.0 0.0 0.0\".to_string());\n     |         ------- move occurs because `loadavg` has type `String`, which does not implement the `Copy` trait\n...\n  32 "
+    },
+    {
+      "timestamp": "2026-11-06 12:11:51",
+      "organ": "soma_env_agent_r14",
+      "error": "error[E0382]: borrow of moved value: `loadavg`\n    --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r14.rs:67:29\n     |\n   8 |     let loadavg = fs::read_to_string(\"/proc/loadavg\").unwrap_or_else(|_| \"0.0 0.0 0.0\".to_string());\n     |         ------- move occurs because `loadavg` has type `String`, which does not implement the `Copy` trait\n...\n "
+    },
+    {
+      "timestamp": "2026-11-06 12:13:24",
+      "organ": "soma_env_agent_r16",
+      "error": "error[E0382]: borrow of moved value: `loadavg`\n    --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r16.rs:78:57\n     |\n   9 |     let loadavg = read_to_string(\"/proc/loadavg\").unwrap_or_else(|_| \"0.00 0.00 0.00\".to_string());\n     |         ------- move occurs because `loadavg` has type `String`, which does not implement the `Copy` trait\n...\n  "
+    },
+    {
+      "timestamp": "2026-11-06 12:14:44",
+      "organ": "soma_env_agent_r18",
+      "error": "error[E0382]: borrow of moved value: `devmem_path`\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r18.rs:60:34\n   |\n14 |     let devmem_path = env::var(\"SOMA_DEVMEM_PATH\").unwrap_or_else(|_| \"./dev/mem_channels/devmem_arena.bin\".to_string());\n   |         ----------- move occurs because `devmem_path` has type `String`, which does not impleme"
+    },
+    {
+      "timestamp": "2026-11-06 12:15:23",
+      "organ": "soma_env_agent_r19",
+      "error": "error[E0382]: borrow of moved value: `loadavg`\n    --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r19.rs:75:33\n     |\n  13 |     let loadavg = read_proc_file(\"/proc/loadavg\");\n     |         ------- move occurs because `loadavg` has type `String`, which does not implement the `Copy` trait\n...\n  33 |         (4, \"CH4:SOMA_ENV_AGENT_R19_SYS\", lo"
+    },
+    {
+      "timestamp": "2026-11-06 12:18:04",
+      "organ": "soma_env_agent_r23",
+      "error": "error: argument never used\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r23.rs:67:75\n   |\n67 |     println!(\"Kernel State: LoadAvg={}, MemTotal=Parsed\", loadavg.trim(), \"OK\");\n   |              -------------------------------------------                  ^^^^ argument never used\n   |              |\n   |              formatting specifier mi"
+    },
+    {
+      "timestamp": "2026-11-06 12:18:44",
+      "organ": "soma_env_agent_r24",
+      "error": "error[E0382]: borrow of moved value: `loadavg`\n    --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r24.rs:64:71\n     |\n   8 |     let loadavg = read_to_string(\"/proc/loadavg\").unwrap_or_else(|_| \"0.0 0.0 0.0\".to_string());\n     |         ------- move occurs because `loadavg` has type `String`, which does not implement the `Copy` trait\n...\n  19 "
+    },
+    {
+      "timestamp": "2026-11-06 12:19:34",
+      "organ": "soma_env_agent_r25",
+      "error": "error[E0768]: no valid digits found for number\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r25.rs:24:96\n   |\n24 |         (4, \"CH4:SOMA_ENV_AGENT_R25\", format!(\"Apps: {} | Load: {}\", bin_apps.len(), loadavg), 0xSOMA_R25_SENSE as u64),\n   |                                                                                                ^^\n\ne"
+    },
+    {
+      "timestamp": "2026-11-06 12:21:23",
+      "organ": "soma_env_agent_r27",
+      "error": "error: `<<` is interpreted as a start of generic arguments for `u64`, not a shift\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r27.rs:54:46\n   |\n54 |         let reg_val = mem_total ^ (ch as u64 << 32);\n   |                                              ^^ -- interpreted as generic arguments\n   |                                             "
+    },
+    {
+      "timestamp": "2026-11-06 12:22:04",
+      "organ": "soma_env_agent_r28",
+      "error": "error[E0382]: borrow of moved value: `load`\n    --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r28.rs:73:55\n     |\n   9 |     let load = std::fs::read_to_string(\"/proc/loadavg\").unwrap_or_else(|_| \"0.00 0.00 0.00\".to_string());\n     |         ---- move occurs because `load` has type `String`, which does not implement the `Copy` trait\n...\n  28 "
+    },
+    {
+      "timestamp": "2026-11-06 12:22:42",
+      "organ": "soma_env_agent_r29",
+      "error": "error[E0382]: borrow of moved value: `loadavg`\n    --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r29.rs:64:67\n     |\n   8 |     let loadavg = read_to_string(\"/proc/loadavg\").unwrap_or_else(|_| \"0.0 0.0 0.0\".to_string());\n     |         ------- move occurs because `loadavg` has type `String`, which does not implement the `Copy` trait\n...\n  19 "
+    },
+    {
+      "timestamp": "2026-11-06 12:23:24",
+      "organ": "soma_env_agent_r30",
+      "error": "error: literal out of range for `i32`\n  --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/rootfs/src/soma_env_agent_r30.rs:24:48\n   |\n24 |         (4, \"CH4:SOMA_ENV_AGENT_R30\", loadavg, 0x30_0000_0000_0000),\n   |                                                ^^^^^^^^^^^^^^^^^^^\n   |\n   = note: the literal `0x30_0000_0000_0000` (decimal `13510798882111488`) does not fit i"
+    },
+    {
+      "timestamp": "2026-11-06 13:12:22",
+      "organ": "soma_gpui_desktop_r1",
+      "error": "error[E0308]: mismatched types\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r1.rs:133:60\n    |\n133 |         render_node(&mut buf, &root_tree, 0, 0, 1024, 768, &ctx);\n    |         -----------                                        ^^^^ expected `&RenderCtx<'_>`, found `&RenderCtx`\n    |         |\n    |         arguments to this function "
+    },
+    {
+      "timestamp": "2026-11-06 13:12:22",
+      "organ": "soma_gpui_desktop_r1",
+      "error": "error[E0308]: mismatched types\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r1.rs:133:60\n    |\n133 |         render_node(&mut buf, &root_tree, 0, 0, 1024, 768, &ctx);\n    |         -----------                                        ^^^^ expected `&RenderCtx<'_>`, found `&RenderCtx`\n    |         |\n    |         arguments to this function "
+    },
+    {
+      "timestamp": "2026-11-06 13:13:10",
+      "organ": "soma_gpui_desktop_r1",
+      "error": "error[E0599]: no associated function or constant named `new` found for struct `gpui::RenderCtx<'a>` in the current scope\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r1.rs:59:26\n    |\n 59 |     let ctx = RenderCtx::new();\n    |                          ^^^ associated function or constant not found in `gpui::RenderCtx<'_>`\n...\n275 |     pu"
+    },
+    {
+      "timestamp": "2026-11-06 13:13:10",
+      "organ": "soma_gpui_desktop_r1",
+      "error": "error[E0599]: no associated function or constant named `new` found for struct `gpui::RenderCtx<'a>` in the current scope\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r1.rs:59:26\n    |\n 59 |     let ctx = RenderCtx::new();\n    |                          ^^^ associated function or constant not found in `gpui::RenderCtx<'_>`\n...\n275 |     pu"
+    },
+    {
+      "timestamp": "2026-11-06 13:13:51",
+      "organ": "soma_gpui_desktop_r1",
+      "error": "error[E0599]: no associated function or constant named `default` found for struct `gpui::RenderCtx<'a>` in the current scope\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r1.rs:48:26\n    |\n 48 |     let ctx = RenderCtx::default();\n    |                          ^^^^^^^ associated function or constant not found in `gpui::RenderCtx<'_>`\n...\n"
+    },
+    {
+      "timestamp": "2026-11-06 13:13:51",
+      "organ": "soma_gpui_desktop_r1",
+      "error": "error[E0599]: no associated function or constant named `default` found for struct `gpui::RenderCtx<'a>` in the current scope\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r1.rs:48:26\n    |\n 48 |     let ctx = RenderCtx::default();\n    |                          ^^^^^^^ associated function or constant not found in `gpui::RenderCtx<'_>`\n...\n"
+    },
+    {
+      "timestamp": "2026-11-06 13:15:23",
+      "organ": "soma_gpui_desktop_r2",
+      "error": "error[E0308]: mismatched types\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r2.rs:153:55\n    |\n153 |         render_node(&mut buf, &root, 0, 0, 1024, 768, &ctx);\n    |         -----------                                   ^^^^ expected `&RenderCtx<'_>`, found `&RenderCtx`\n    |         |\n    |         arguments to this function are incorr"
+    },
+    {
+      "timestamp": "2026-11-06 13:15:23",
+      "organ": "soma_gpui_desktop_r2",
+      "error": "error[E0308]: mismatched types\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r2.rs:153:55\n    |\n153 |         render_node(&mut buf, &root, 0, 0, 1024, 768, &ctx);\n    |         -----------                                   ^^^^ expected `&RenderCtx<'_>`, found `&RenderCtx`\n    |         |\n    |         arguments to this function are incorr"
+    },
+    {
+      "timestamp": "2026-11-06 13:16:11",
+      "organ": "soma_gpui_desktop_r2",
+      "error": "error[E0599]: no associated function or constant named `default` found for struct `gpui::RenderCtx<'a>` in the current scope\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r2.rs:52:30\n    |\n 52 |         let ctx = RenderCtx::default();\n    |                              ^^^^^^^ associated function or constant not found in `gpui::RenderCtx<'"
+    },
+    {
+      "timestamp": "2026-11-06 13:16:11",
+      "organ": "soma_gpui_desktop_r2",
+      "error": "error[E0599]: no associated function or constant named `default` found for struct `gpui::RenderCtx<'a>` in the current scope\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r2.rs:52:30\n    |\n 52 |         let ctx = RenderCtx::default();\n    |                              ^^^^^^^ associated function or constant not found in `gpui::RenderCtx<'"
+    },
+    {
+      "timestamp": "2026-11-06 13:16:58",
+      "organ": "soma_gpui_desktop_r2",
+      "error": "error[E0599]: no associated function or constant named `new` found for struct `gpui::RenderCtx<'a>` in the current scope\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r2.rs:53:30\n    |\n 53 |         let ctx = RenderCtx::new();\n    |                              ^^^ associated function or constant not found in `gpui::RenderCtx<'_>`\n...\n289 "
+    },
+    {
+      "timestamp": "2026-11-06 13:16:58",
+      "organ": "soma_gpui_desktop_r2",
+      "error": "error[E0599]: no associated function or constant named `new` found for struct `gpui::RenderCtx<'a>` in the current scope\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r2.rs:53:30\n    |\n 53 |         let ctx = RenderCtx::new();\n    |                              ^^^ associated function or constant not found in `gpui::RenderCtx<'_>`\n...\n289 "
+    },
+    {
+      "timestamp": "2026-11-06 13:18:37",
+      "organ": "soma_gpui_desktop_r3",
+      "error": "error[E0308]: mismatched types\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r3.rs:139:60\n    |\n139 |         render_node(&mut buf, &root_tree, 0, 0, 1024, 768, &ctx);\n    |         -----------                                        ^^^^ expected `&RenderCtx<'_>`, found `&RenderCtx`\n    |         |\n    |         arguments to this function "
+    },
+    {
+      "timestamp": "2026-11-06 13:18:37",
+      "organ": "soma_gpui_desktop_r3",
+      "error": "error[E0308]: mismatched types\n   --> /home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/src_bay/soma_gpui_desktop_r3.rs:139:60\n    |\n139 |         render_node(&mut buf, &root_tree, 0, 0, 1024, 768, &ctx);\n    |         -----------                                        ^^^^ expected `&RenderCtx<'_>`, found `&RenderCtx`\n    |         |\n    |         arguments to this function "
+    }
+  ],
+  "RuntimeCrashes": [],
+  "ActiveNegativeConstraints": [
+    "[Anti-Echo from soma_env_agent_r25]: Avoid `error[E0768]: no valid digits found for number`",
+    "[Anti-Echo from soma_env_agent_r27]: Avoid `error: `<<` is interpreted as a start of generic arguments for `u64`, not a shift`",
+    "[Anti-Echo from soma_env_agent_r28]: Avoid `error[E0382]: borrow of moved value: `load``",
+    "[Anti-Echo from soma_env_agent_r29]: Avoid `error[E0382]: borrow of moved value: `loadavg``",
+    "[Anti-Echo from soma_env_agent_r30]: Avoid `error: literal out of range for `i32``",
+    "[Anti-Echo from soma_gpui_desktop_r1]: Avoid `error[E0308]: mismatched types`",
+    "[Anti-Echo from soma_gpui_desktop_r1]: Avoid `error[E0599]: no associated function or constant named `new` found for struct `gpui::RenderCtx<'a>` in the current scope`",
+    "[Anti-Echo from soma_gpui_desktop_r1]: Avoid `error[E0599]: no associated function or constant named `default` found for struct `gpui::RenderCtx<'a>` in the current scope`",
+    "[Anti-Echo from soma_gpui_desktop_r2]: Avoid `error[E0308]: mismatched types`",
+    "[Anti-Echo from soma_gpui_desktop_r2]: Avoid `error[E0599]: no associated function or constant named `default` found for struct `gpui::RenderCtx<'a>` in the current scope`",
+    "[Anti-Echo from soma_gpui_desktop_r2]: Avoid `error[E0599]: no associated function or constant named `new` found for struct `gpui::RenderCtx<'a>` in the current scope`",
+    "[Anti-Echo from soma_gpui_desktop_r3]: Avoid `error[E0308]: mismatched types`"
+  ]
+}

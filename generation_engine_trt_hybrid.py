@@ -290,6 +290,7 @@ class TrtEdgeLlmHybridEngine:
         self.stop_tokens = list(profile_config.get("stop_tokens", list()))
 
         self.dynamic_logit_bias: Dict[str, float] = {}
+        self.bypass_lora: bool = bool(profile_config.get("bypass_lora", False))
         self.micro_chunk_tokens: int = int(profile_config.get("micro_chunk_tokens", 64))
         self.vram_live_gate_enabled: bool = bool(profile_config.get("vram_live_gate_enabled", True))
         self.vram_live_alpha: float = float(profile_config.get("vram_live_alpha", 1.0))
@@ -391,6 +392,10 @@ class TrtEdgeLlmHybridEngine:
         top_logprobs: List[float],
         token_piece: str = "",
     ) -> Tuple[List[float], List[int], float, List[int]]:
+        if getattr(self, "bypass_lora", False):
+            self.dynamic_logit_bias.clear()
+            return [1.0 / max(1, self.top_k)] * self.top_k, list(range(self.top_k)), 0.0, []
+
         if hasattr(self.rust_router, "forward_from_token_logprobs"):
             weights, selected_exp, entropy = self.rust_router.forward_from_token_logprobs(
                 int(token_id),

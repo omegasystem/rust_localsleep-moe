@@ -91,14 +91,28 @@ def init_rust_router_and_pool(profile: Dict[str, Any], device: str = "cuda", ove
     enable_2_4 = bool(profile.get("enable_2_4_sparsity", True))
 
     # 1. Check if an Evolved Core Engine (`evolved_router_plugin.py`) is active or explicitly selected!
+    #    When `override_cube_id == ""` (Auto Sync), automatically resolve the highest-scoring verified cube
+    #    from `localsleep_telemetry_vault.db` (or `hypercube_registry.json` active_cube_id)!
     gen_root = os.path.join(os.path.dirname(__file__), "hypercube_generations")
     reg_file = os.path.join(gen_root, "hypercube_registry.json")
     if os.path.exists(reg_file) and override_cube_id != "gen_000_origin":
         try:
             with open(reg_file, "r", encoding="utf-8") as f:
                 reg = json.load(f)
-            active_id = override_cube_id if override_cube_id else reg.get("active_cube_id", "gen_000_origin")
-            active_path = os.path.join(gen_root, active_id) if override_cube_id else reg.get("active_cube_path", "")
+            active_id = override_cube_id if override_cube_id else reg.get("active_cube_id", "gen_022_20261105_114610_matryoshka_L1")
+            if not active_id or not os.path.isdir(os.path.join(gen_root, active_id)):
+                try:
+                    from localsleep_telemetry_db import LocalSleepTelemetryVaultDB
+                    vault = LocalSleepTelemetryVaultDB(session_dir=os.path.join(os.path.dirname(__file__), "sessions"))
+                    s_map = vault.get_cube_scores_map()
+                    if s_map:
+                        best_rec = max(s_map.values(), key=lambda r: (float(r.get("composite_score", 0.0)), int(r.get("stage_num", 0))))
+                        cand_best_id = str(best_rec.get("cube_id", ""))
+                        if cand_best_id and os.path.isdir(os.path.join(gen_root, cand_best_id)):
+                            active_id = cand_best_id
+                except Exception:
+                    pass
+            active_path = os.path.join(gen_root, active_id) if active_id != "gen_000_origin" else reg.get("active_cube_path", "")
             if active_id != "gen_000_origin" and active_path and os.path.isdir(active_path):
                 evolved_plugin = os.path.join(active_path, "evolved_router_plugin.py")
                 if os.path.exists(evolved_plugin):

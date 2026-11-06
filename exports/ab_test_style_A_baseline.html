@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pando-Lite Parallel Worktree Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0c;
+            color: #e2e8f0;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        .glass-panel {
+            background: rgba(23, 23, 26, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+        
+        .lane-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid transparent;
+        }
+        .lane-card:hover {
+            background: rgba(30, 30, 35, 1);
+            transform: translateY(-2px);
+            border-left-color: #3b82f6;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .dot-clean { background-color: #10b981; box-shadow: 0 0 8px #10b981; }
+        .dot-dirty { background-color: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+
+        .progress-bar-bg {
+            background: #1e293b;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            transition: width 0.5s ease-out;
+        }
+
+        .terminal-box {
+            background: #000;
+            border: 1px solid #334155;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .heatmap-cell {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            transition: background 0.3s;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0c; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    </style>
+</head>
+<body class="p-6">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <i data-lucide="git-branch" class="text-blue-500"></i>
+                Pando-Lite <span class="text-blue-500 font-light">Parallel Worktree Dashboard</span>
+            </h1>
+            <p class="text-slate-500 text-sm mt-1">L0 (Local) $\rightarrow$ L1 (Staging) $\rightarrow$ L2 (Public) Pipeline Monitor</p>
+        </div>
+        <div class="flex gap-4">
+            <div class="text-right">
+                <p class="text-xs text-slate-500 uppercase font-bold">System Status</p>
+                <p class="text-sm text-green-400 flex items-center gap-1 justify-end">
+                    <span class="status-dot dot-clean"></span> Synchronized
+                </p>
+            </div>
+        </div>
+    </header>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="glass-panel p-4">
+            <div class="flex justify-between items-start">
+                <span class="text-slate-400 text-xs font-semibold uppercase">Active Lanes</span>
+                <i data-lucide="layers" class="w-4 h-4 text-slate-500"></i>
+            </div>
+            <div class="text-3xl font-bold mt-2">5 <span class="text-sm font-normal text-slate-500">/ 8 Max</span></div>
+        </div>
+        <div class="glass-panel p-4">
+            <div class="flex justify-between items-start">
+                <span class="text-slate-400 text-xs font-semibold uppercase">Shared Object Cache</span>
+                <i data-lucide="database" class="w-4 h-4 text-slate-500"></i>
+            </div>
+            <div class="text-3xl font-bold mt-2 text-blue-400">12.4 <span class="text-sm font-normal text-slate-500">GB Saved</span></div>
+        </div>
+        <div class="glass-panel p-4">
+            <div class="flex justify-between items-start">
+                <span class="text-slate-400 text-xs font-semibold uppercase">L0 $\rightarrow$ L1 Compactions</span>
+                <i data-lucide="zap" class="w-4 h-4 text-slate-500"></i>
+            </div>
+            <div class="text-3xl font-bold mt-2">142 <span class="text-sm font-normal text-slate-500">Total</span></div>
+        </div>
+        <div class="glass-panel p-4">
+            <div class="flex justify-between items-start">
+                <span class="text-slate-400 text-xs font-semibold uppercase">L2 Privacy Intercept</span>
+                <i data-lucide="shield-check" class="w-4 h-4 text-slate-500"></i>
+            </div>
+            <div class="text-3xl font-bold mt-2 text-green-500">ACTIVE</div>
+        </div>
+    </div>
+
+    <!-- Worktree Lanes Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        
+        <!-- Trunk (Main) -->
+        <div class="lg:col-span-1">
+            <h2 class="text-sm font-bold text-slate-400 mb-3 uppercase tracking-widest flex items-center gap-2">
+                <i data-lucide="anchor" class="w-4 h-4"></i> Trunk (L0 Base)
+            </h2>
+            <div class="lane-card glass-panel p-5 border-l-blue-600">
+                <div class="flex justify-between items-center mb-4">
+                    <span class="mono font-bold text-lg">private_main</span>
+                    <span class="text-xs px-2 py-1 rounded bg-blue-900/30 text-blue-400 border border-blue-800">BASE</span>
+                </div>
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="status-dot dot-clean"></span>
+                    <span class="text-xs text-slate-400">Clean State</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-xs mono">
+                        <span>Ahead: 0</span>
+                        <span>Behind: 0</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill bg-blue-500" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parallel Lanes -->
+        <div class="lg:col-span-2">
+            <h2 class="text-sm font-bold text-slate-400 mb-3 uppercase tracking-widest flex items-center gap-2">
+                <i data-lucide="git-merge" class="w-4 h-4"></i> Parallel Lanes (L1)
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                
+                <!-- Lane 1 -->
+                <div class="lane-card glass-panel p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="mono font-semibold">lane_localsleep</span>
+                        <span class="status-dot dot-dirty"></span>
+                    </div>
+                    <div class="text-xs text-slate-500 mb-3">Feature: Local Sleep Optimization</div>
+                    <div class="flex justify-between text-[10px] mono mb-1">
+                        <span class="text-blue-400">Ahead +12</span>
+                        <span class="text-slate-500">Behind -2</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill bg-blue-500" style="width: 75%"></div>
+                    </div>
+                </div>
+
+                <!-- Lane 2 -->
+                <div class="lane-card glass-panel p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="mono font-semibold">lane_dyson_phys</span>
+                        <span class="status-dot dot-clean"></span>
+                    </div>
+                    <div class="text-xs text-slate-500 mb-3">Physics: Dyson Sphere Calculation</div>
+                    <div class="flex justify-between text-[10px] mono mb-1">
+                        <span class="text-blue-400">Ahead +45</span>
+                        <span class="text-slate-500">Behind -0</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill bg-blue-500" style="width: 90%"></div>
+                    </div>
+                </div>
+
+                <!-- Lane 3 -->
+                <div class="lane-card glass-panel p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="mono font-semibold">lane_ui_ab</span>
+                        <span class="status-dot dot-dirty"></span>
+                    </div>
+                    <div class="text-xs text-slate-500 mb-3">UI: A/B Testing Dashboard v2</div>
+                    <div class="flex justify-between text-[10px] mono mb-1">
+                        <span class="text-blue-400">Ahead +3</span>
+                        <span class="text-slate-500">Behind -15</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill bg-blue-500" style="width: 30%"></div>
+                    </div>
+                </div>
+
+                <!-- Lane 4 (Public) -->
+                <div class="lane-card glass-panel p-4 border-l-green-600">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="mono font-semibold">public_main</span>
+                        <span class="text-xs px-2 py-1 rounded bg-green-900/30 text-green-400 border border-green-800">L2</span>
+                    </div>
+                    <div class="text-xs text-slate-500 mb-3">Production Release Branch</div>
+                    <div class="flex justify-between text-[10px] mono mb-1">
+                        <span class="text-blue-400">Ahead +0</span>
+                        <span class="text-slate-500">Behind -0</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill bg-green-500" style="width: 100%"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Section: Visualization & Controls -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        
+        <!-- Topology Heatmap -->
+        <div class="xl:col-span-2 glass-panel p-6">
+            <h3 class="text-sm font-bold text-slate-400 mb-6 uppercase tracking-widest flex items-center gap-2">
+                <i data-lucide="activity" class="w-4 h-4"></i> Commit Density Topology (L0 $\rightarrow$ L1 $\rightarrow$ L2)
+            </h3>
+            <div class="flex flex-col gap-4">
+                <!-- Heatmap Row -->
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] mono w-20 text-slate-500">L0 Trunk</span>
+                    <div class="flex gap-1" id="heatmap-l0"></div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] mono w-20 text-slate-500">L1 Lanes</span>
+                    <div class="flex gap-1" id="heatmap-l1"></div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] mono w-20 text-slate-500">L2 Public</span>
+                    <div class="flex gap-1" id="heatmap-l2"></div>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-4 text-[10px] text-slate-500">
+                <div class="flex items-center gap-1"><div class="heatmap-cell bg-slate-800"></div> Low</div>
+                <div class="flex items-center gap-1"><div class="heatmap-cell bg-blue-600"></div> Mid</div>
+                <div class="flex items-center gap-1"><div class="heatmap-cell bg-blue-400"></div> High</div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="glass-panel p-6 flex flex-col">
+            <h3 class="text-sm font-bold text-slate-400 mb-6 uppercase tracking-widest flex items-center gap-2">
+                <i data-lucide="settings" class="w-4 h-4"></i> Operations
+            </h3>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <button onclick="logAction('Spawn Lane', 'Creating new worktree at ~/pando/lane_new_feat...')" class="flex items-center justify-center gap-2 p-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 transition">
+                    <i data-lucide="plus-circle" class="w-3 h-3"></i> Spawn Lane
+                </button>
+                <button onclick="logAction('Run L0 Test', 'Executing L0 sanity checks... All tests passed.')" class="flex items-center justify-center gap-2 p-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 rounded border border-slate-600 transition">
+                    <i data-lucide="play" class="w-3 h-3"></i> Run L0 Test
+                </button>
+                <button onclick="logAction('Squash Compact', 'Compacting L0 $\rightarrow$ L1... 12 commits squashed into 1.')" class="flex items-center justify-center gap-2 p-2 text-xs font-semibold bg-blue-900/40 hover:bg-blue-800/60 text-blue-300 rounded border border-blue-700 transition">
+                    <i data-lucide="compress" class="w-3 h-3"></i> Squash Compact
+                </button>
+                <button onclick="logAction('Project Public', 'Pushing L1 $\rightarrow$ L2... Privacy filter applied. Success.')" class="flex items-center justify-center gap-2 p-2 text-xs font-semibold bg-green-900/40

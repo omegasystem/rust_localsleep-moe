@@ -643,27 +643,32 @@ class FlyBrainVramScope(QWidget):
             # Bottom mini token & sleep counter
             painter.setPen(QPen(QColor(148, 163, 184)))
             painter.setFont(QFont("Consolas", 7 if rows >= 4 else 8))
-            painter.drawText(bx + 5, by + cell_h - 3, f"Toks:{tok_val} | SleepCyc:{slp_cyc} | 2:4 Mask: 50%")
+            painter.drawText(bx + 4, by + cell_h - 3, f"Tok:{tok_val}|Slp:{slp_cyc}|2:4:50%")
 
         # Bottom Strip: Live Micro-Perturbation Delta Bar (Δ||A||_k from Mean)
         strip_y = h - 38
         mean_norm = sum(self.exp_norms[:n_exp]) / float(n_exp)
         painter.setPen(QPen(QColor(52, 211, 153)))
         painter.setFont(QFont("Consolas", 8, QFont.Weight.Bold))
-        painter.drawText(14, strip_y, f"⚡ [Δ||A||_k (vs {mean_norm:.3f})]:")
+        painter.drawText(10, strip_y, f"⚡ [Δ||A||_k (vs {mean_norm:.3f})]:")
 
-        bar_start_x = 210
-        bar_slot_w = max(36, (w - bar_start_x - 12) // n_exp)
+        bar_start_x = 188
+        cols_per_row = 8 if n_exp > 8 else n_exp
+        bar_slot_w = max(54, (w - bar_start_x - 10) // cols_per_row)
+        painter.setFont(QFont("Consolas", 7 if n_exp > 8 else 8, QFont.Weight.Bold))
         for i in range(n_exp):
             delta = self.exp_norms[i] - mean_norm
-            sx = bar_start_x + i * bar_slot_w
+            r_idx = i // cols_per_row
+            c_idx = i % cols_per_row
+            sx = bar_start_x + c_idx * bar_slot_w
+            sy = (strip_y - 8 if n_exp > 8 else strip_y) + r_idx * 18
             col = QColor(52, 211, 153) if delta >= 0 else QColor(244, 63, 94)
             painter.setPen(QPen(col))
-            lbl_txt = f"E{i}:{delta:+.3f}" if n_exp > 8 else f"E{i}:{delta:+.4f}"
-            painter.drawText(sx, strip_y, lbl_txt)
+            lbl_txt = f"E{i:02d}:{delta:+.2f}" if n_exp > 8 else f"E{i}:{delta:+.4f}"
+            painter.drawText(sx, sy, lbl_txt)
 
-            bw = min(bar_slot_w - 4, max(2, int(abs(delta) * 260)))
-            painter.fillRect(sx, strip_y + 5, bw, 5, col)
+            bw = min(bar_slot_w - 6, max(2, int(abs(delta) * 180)))
+            painter.fillRect(sx, sy + 3, bw, 4, col)
 
 
 # ============================================================================
@@ -833,6 +838,10 @@ class ThreeDEegWaterfallScope(QWidget):
 # 4. Main Tactical Command & Control Desktop Window (`ls_moe_pyqt_gui.py`)
 # ============================================================================
 class LocalSleepMoETacticalWindow(QMainWindow):
+    sig_web_append_chat = pyqtSignal(str)
+    sig_web_stream_piece = pyqtSignal(str, int, float, list, list)
+    sig_web_sync_ui = pyqtSignal()
+
     def __init__(self) -> None:
         super().__init__()
         self.setWindowTitle("🐈‍⬛ Kuro LocalSleep-MoE // PyQt6 Tactical Command & Direct VRAM Brain Scope")
@@ -871,6 +880,26 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         self._load_initial_active_profile()
         self.init_engine_from_ui(reset_ckpt=False, resume_sess=True)
 
+        self.sig_web_append_chat.connect(self._on_web_append_chat)
+        self.sig_web_stream_piece.connect(self._on_stream_token)
+        self.sig_web_sync_ui.connect(self._on_web_sync_ui)
+
+        # Dual-Mode Embedded Web UI & OpenAI-Compatible API Server (:18935)
+        self.web_port = int(os.environ.get("WEB_PORT", "18935"))
+        self.web_state = None
+        if "--no-web" not in sys.argv:
+            try:
+                from ls_moe_web_ui import start_embedded_web_server
+                self.web_state = start_embedded_web_server(self, host="0.0.0.0", port=self.web_port)
+                if self.web_state is not None:
+                    self.txt_chat.appendPlainText(
+                        f"🌐 [Dual-Mode Web UI + OpenAI API Online] -> http://0.0.0.0:{self.web_port}\n"
+                        f"   • Web Console : http://127.0.0.1:{self.web_port}\n"
+                        f"   • OpenAI API  : http://127.0.0.1:{self.web_port}/v1/chat/completions (model: localsleep-moe)"
+                    )
+            except Exception as e:
+                print(f"[Web UI Init Warning] {e}")
+
         # 30 FPS Live VRAM Texture & EEG Idle Refresh Timer
         self.vram_timer = QTimer(self)
         self.vram_timer.timeout.connect(self._on_vram_timer_tick)
@@ -906,14 +935,12 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         row_prof_top.addWidget(self.btn_save_prof_cfg)
         form.addRow("Profile 設定檔:", row_prof_top)
 
-        # In-GUI Hot-Swappable Core Router Engine Selector (8-LoRA Base vs gen_018 16-LoRA Auto Top-K!)
+        # In-GUI Hot-Swappable Core Router Engine Selector (Auto-locks to Active / Highest-Scoring Cube!)
         row_core_eng = QHBoxLayout()
         self.cmb_core_engine = QComboBox()
-        self.cmb_core_engine.setToolTip("一鍵熱插拔切換內部路由引擎與專家池規模（例如原版 8-LoRA vs gen_018 的 16-LoRA + Auto Top-K）！")
-        self._refresh_core_engine_ComboBox(default_cube="gen_018_20261031_143847_matryoshka_L1")
-        self.cmb_core_engine.currentIndexChanged.connect(
-            lambda _: self.init_engine_from_ui(reset_ckpt=False, resume_sess=self.chk_resume.isChecked())
-        )
+        self.cmb_core_engine.setToolTip("一鍵熱插拔切換內部路由引擎與配對的 16-LoRA 權重（預設自動跟隨超立方體最高分 Active 核心，如 gen_022）！")
+        self._refresh_core_engine_ComboBox(default_cube="")
+        self.cmb_core_engine.currentIndexChanged.connect(self._on_core_engine_combo_changed)
         btn_refresh_cores = QPushButton("🔄")
         btn_refresh_cores.setFixedWidth(36)
         btn_refresh_cores.setToolTip("重新掃描 hypercube_generations 內所有可用世代引擎")
@@ -1058,6 +1085,20 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         btn_row_hypercube.addWidget(self.btn_quick_start_evo)
         btn_row_hypercube.addWidget(self.btn_quick_pause_evo)
         form.addRow(btn_row_hypercube)
+
+        # Dual-Mode LoRA Master Switch & Web UI / OpenAI API Row
+        btn_row_dual = QHBoxLayout()
+        self.btn_lora_master = QPushButton("🟢 LoRA: ON (動態突觸啟用)")
+        self.btn_lora_master.setStyleSheet("background-color: #064e3b; color: #a7f3d0; border-color: #10b981;")
+        self.btn_lora_master.setToolTip("一鍵切換啟用 16-LoRA 動態路由與赫布可塑性，或旁路 (Bypass) 為原生基底模型推論！")
+        self.btn_lora_master.clicked.connect(self._on_toggle_lora_master)
+
+        self.lbl_web_api = QLabel("🌐 Web UI & OpenAI API: :18935 (/v1/chat/completions)")
+        self.lbl_web_api.setStyleSheet("color: #38bdf8; font-family: monospace; font-size: 11px;")
+
+        btn_row_dual.addWidget(self.btn_lora_master)
+        btn_row_dual.addWidget(self.lbl_web_api, stretch=1)
+        form.addRow(btn_row_dual)
 
         self.lbl_conn_status = QLabel("🟢 狀態：準備就緒")
         self.lbl_conn_status.setStyleSheet("color: #34d399; font-family: monospace; font-size: 11px;")
@@ -1401,6 +1442,16 @@ class LocalSleepMoETacticalWindow(QMainWindow):
                 self.cmb_core_engine.setCurrentIndex(idx)
         self.cmb_core_engine.blockSignals(False)
 
+    def _on_core_engine_combo_changed(self, _idx: int = 0) -> None:
+        sel_cube = str(self.cmb_core_engine.currentData() or "")
+        if sel_cube and sel_cube != "gen_000_origin":
+            try:
+                rep = HypercubeReplicatorManager(workspace_root=str(BASE_DIR))
+                rep.rotate_hypercube_dimension(sel_cube)
+            except Exception:
+                pass
+        self.init_engine_from_ui(reset_ckpt=False, resume_sess=self.chk_resume.isChecked())
+
     def init_engine_from_ui(
         self,
         reset_ckpt: bool = False,
@@ -1423,7 +1474,11 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         loaded_cube_tag = getattr(self.rust_router, "loaded_cube_id", selected_cube or "gen_000_origin")
 
         ckpt_profile_key = prof_name if active_n_exp == 8 else f"{prof_name}_{active_n_exp}lora"
-        self.ckpt_mgr = EmbodiedCheckpointManager(checkpoint_dir=str(BASE_DIR / "checkpoints"), profile=ckpt_profile_key)
+        self.ckpt_mgr = EmbodiedCheckpointManager(
+            checkpoint_dir=str(BASE_DIR / "checkpoints"),
+            profile=ckpt_profile_key,
+            cube_id=str(loaded_cube_tag),
+        )
         self.ckpt_mgr.load_state(self.rust_router, expert_pool=self.expert_pool, reset=reset_ckpt)
 
         self.session_logger = SessionLogger(
@@ -1506,6 +1561,45 @@ class LocalSleepMoETacticalWindow(QMainWindow):
             f"=== 🐈‍⬛ [Engine Hot-Swapped] Profile={prof_name} | Core={loaded_cube_tag} ({active_n_exp}-LoRA + Auto Top-K) | "
             f"Sandbox={prj_uuid} | L1_WorkingMemory={wm_tag} ==="
         )
+        if getattr(self, "web_state", None) is not None:
+            try:
+                self.web_state.sync_from_qt_win()
+            except Exception:
+                pass
+
+    def _on_toggle_lora_master(self) -> None:
+        if self.hybrid_engine is None:
+            return
+        next_bypass = not bool(getattr(self.hybrid_engine, "bypass_lora", False))
+        self.hybrid_engine.bypass_lora = next_bypass
+        if next_bypass:
+            self.hybrid_engine.dynamic_logit_bias.clear()
+            self.hybrid_engine.push_live_vram_gate_async(enabled=False, alpha=0.0)
+            self.btn_lora_master.setText("⚪ LoRA: OFF (原生 Bypass)")
+            self.btn_lora_master.setStyleSheet("background-color: #331d2c; color: #fecdd3; border-color: #f43f5e;")
+            self.lbl_conn_status.setText("⚪ [LoRA Master Switch] 已切換為 Vanilla Bypass 原生推論模式")
+        else:
+            self._on_loop_mode_changed()
+            self.btn_lora_master.setText("🟢 LoRA: ON (動態突觸啟用)")
+            self.btn_lora_master.setStyleSheet("background-color: #064e3b; color: #a7f3d0; border-color: #10b981;")
+            self.lbl_conn_status.setText("🟢 [LoRA Master Switch] 已啟用 LocalSleep-MoE 動態突觸推論模式")
+        if getattr(self, "web_state", None) is not None:
+            self.web_state.lora_enabled = not next_bypass
+
+    def _on_web_append_chat(self, text: str) -> None:
+        self.txt_chat.appendPlainText(text)
+
+    def _on_web_sync_ui(self) -> None:
+        if getattr(self, "web_state", None) is None or self.hybrid_engine is None:
+            return
+        lora_on = bool(self.web_state.lora_enabled)
+        self.hybrid_engine.bypass_lora = not lora_on
+        if lora_on:
+            self.btn_lora_master.setText("🟢 LoRA: ON (動態突觸啟用)")
+            self.btn_lora_master.setStyleSheet("background-color: #064e3b; color: #a7f3d0; border-color: #10b981;")
+        else:
+            self.btn_lora_master.setText("⚪ LoRA: OFF (原生 Bypass)")
+            self.btn_lora_master.setStyleSheet("background-color: #331d2c; color: #fecdd3; border-color: #f43f5e;")
 
     def _on_click_condense_working_memory(self) -> None:
         prof_name = self.cmb_profile.currentText()
@@ -1612,8 +1706,40 @@ class LocalSleepMoETacticalWindow(QMainWindow):
             self.hypercube_win = HypercubeTaskMonitorWindow(
                 workspace_root=str(BASE_DIR),
                 get_server_info_fn=lambda: (self.inp_url.text().strip(), self.inp_model.text().strip()),
+                on_cube_promoted_fn=self._on_hypercube_promoted_hot_swap,
+                on_live_lora_step_fn=self._on_hypercube_live_lora_step,
             )
         return self.hypercube_win
+
+    def _on_hypercube_promoted_hot_swap(self, cube_id: str) -> None:
+        """
+        Automatically registers the newly evolved/promoted Hypercube generation (`gen_019`, etc.)
+        into the main window's `cmb_core_engine` dropdown, resets 16-LoRA weights & fatigue to
+        virgin full-blood orthogonal state (`reset_ckpt=True`), and hot-swaps in-place!
+        """
+        self._refresh_core_engine_ComboBox(default_cube=cube_id)
+        self.init_engine_from_ui(reset_ckpt=True, resume_sess=True, auto_sync_profile=False)
+        self.lbl_conn_status.setText(f"🌀 [超立方體熱插拔 + 權重滿血重置完成] 已自動掛載 `{cube_id}` 並重置 16-LoRA 突觸權重！")
+
+    def _on_hypercube_live_lora_step(self, piece: str, tid: int, entropy: float, sel_exps: list, weights: list) -> None:
+        """
+        Drives the main window's 16-LoRA Hybrid Engine, Fly-Brain VRAM Scope, and 3D EEG Waterfall
+        in real time while the Hypercube Evolution window is generating & testing offspring!
+        """
+        if self.hybrid_engine is not None:
+            try:
+                w, sel, ent, _ = self.hybrid_engine._step_local_rust_moe(
+                    int(tid), [int(tid)], [-0.15], token_piece=str(piece or "")
+                )
+                sel_exps = list(sel)
+                weights = list(w)
+                entropy = float(ent)
+            except Exception:
+                pass
+        self.fly_scope.refresh_vram_textures(force_gpu_sync=True)
+        self.fly_scope.notify_token_activity(int(tid), float(entropy), list(sel_exps))
+        fatigues = [x[2] for x in self.fly_scope.exp_states] if self.fly_scope.exp_states else [0.0] * 16
+        self.eeg_scope.push_token_wave(float(entropy), list(sel_exps), list(weights), self.fly_scope.exp_norms, fatigues)
 
     def open_hypercube_task_window(self) -> None:
         win = self._ensure_hypercube_window()
@@ -1783,9 +1909,19 @@ class LocalSleepMoETacticalWindow(QMainWindow):
         self.fly_scope.notify_token_activity(tid, entropy, sel_exps)
         fatigues = [x[2] for x in self.fly_scope.exp_states] if self.fly_scope.exp_states else [0.0] * 8
         self.eeg_scope.push_token_wave(entropy, sel_exps, weights, self.fly_scope.exp_norms, fatigues)
+        if getattr(self, "web_state", None) is not None:
+            self.web_state.active_routed = list(sel_exps)
 
     def _on_stream_finished(self, full_text: str, total_toks: int, elapsed: float, ttft_ms: float) -> None:
         tps = total_toks / max(0.001, elapsed)
+        if getattr(self, "web_state", None) is not None:
+            self.web_state.last_stats = {
+                "tps": round(tps, 2),
+                "ttft_ms": round(ttft_ms, 1),
+                "tokens": int(total_toks),
+                "elapsed": round(elapsed, 2),
+                "entropy": float(self.web_state.last_stats.get("entropy", 0.0)),
+            }
         bbox_note = ""
         if getattr(self, "_active_turn_images", None):
             bbox_img, bbox_list = parse_and_draw_bboxes(self._active_turn_images[-1], full_text)

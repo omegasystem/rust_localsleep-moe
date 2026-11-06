@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import json, math, os, sys, time, torch
-sys.path.insert(0, '/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe')
-sys.path.insert(0, '/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_018_20261031_143847_matryoshka_L1')
+sys.path.insert(0, '/home/node/.openclaw/workspace/projects/rust_localsleep-moe')
+sys.path.insert(0, '/home/node/.openclaw/workspace/projects/rust_localsleep-moe/hypercube_generations/gen_018_20261031_143847_matryoshka_L1')
 from generation_engine_trt_hybrid import FallbackFatigueRouter
 from evolved_router_plugin import EvolvedCoreFatigueRouter
 from evolved_subagent_core import EvolvedSubagentCore

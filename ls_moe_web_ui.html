@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐈‍⬛ LocalSleep-MoE Remote Web Console</title>
+<style>
+  :root {
+    --bg: #0b0e17;
+    --panel: #111625;
+    --panel-alt: #161d31;
+    --border: #26324d;
+    --text: #e2e8f0;
+    --muted: #8b9bb4;
+    --cyan: #38bdf8;
+    --green: #4ade80;
+    --amber: #f59e0b;
+    --red: #f87171;
+    --purple: #c084fc;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "JetBrains Mono", "Fira Code", "Noto Sans TC", monospace;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  /* Top Header & Controls */
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--cyan);
+  }
+  .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: #1e293b;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+  }
+  select, input[type="text"], input[type="number"] {
+    background: #0d1220;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 7px;
+    font-family: inherit;
+    font-size: 12px;
+  }
+  button {
+    background: #1e293b;
+    color: var(--text);
+    border: 1px solid #334155;
+    border-radius: 5px;
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  button:hover { border-color: var(--cyan); color: #fff; }
+  button.lora-on {
+    background: #064e3b;
+    border-color: #10b981;
+    color: #a7f3d0;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.25);
+  }
+  button.lora-off {
+    background: #331d2c;
+    border-color: #f43f5e;
+    color: #fecdd3;
+  }
+  button.primary {
+    background: #0284c7;
+    border-color: #38bdf8;
+    color: #fff;
+  }
+  button.danger {
+    background: #7f1d1d;
+    border-color: #f87171;
+    color: #fecaca;
+  }
+
+  /* Speed & Telemetry Ribbon */
+  .speed-ribbon {
+    background: #0e1424;
+    border-bottom: 1px solid var(--border);
+    padding: 6px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    font-size: 12px;
+  }
+  .metric {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .metric .k { color: var(--muted); font-size: 11px; }
+  .metric .v { font-weight: 700; font-size: 14px; color: var(--cyan); }
+  .metric .v.green { color: var(--green); }
+  .metric .v.amber { color: var(--amber); }
+  .metric .v.purple { color: var(--purple); }
+
+  /* Main Split Layout */
+  .workspace {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 430px;
+    min-height: 0;
+  }
+  @media (max-width: 1024px) {
+    .workspace { grid-template-columns: 1fr; overflow-y: auto; }
+  }
+
+  /* Left: Chat & Multi-line Prompt */
+  .chat-pane {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    min-height: 0;
+  }
+  .chat-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .msg {
+    border-radius: 7px;
+    padding: 10px 13px;
+    line-height: 1.55;
+    font-size: 13.5px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid var(--border);
+  }
+  .msg.user {
+    background: #132038;
+    border-color: #1d4ed8;
+    align-self: flex-end;
+    max-width: 90%;
+  }
+  .msg.assistant {
+    background: #111726;
+    border-color: #26324d;
+    align-self: stretch;
+  }
+  .msg-hdr {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 5px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .input-dock {
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  textarea#promptInput {
+    width: 100%;
+    min-height: 92px;
+    max-height: 240px;
+    resize: vertical;
+    background: #090d16;
+    color: #f8fafc;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    padding: 9px 11px;
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 1.45;
+  }
+  textarea#promptInput:focus {
+    outline: none;
+    border-color: var(--cyan);
+  }
+  .input-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Right: Fatigue Dashboard & Synaptic Magnifier */
+  .telemetry-pane {
+    background: #0d1220;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .sec-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--cyan);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+  }
+  .expert-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .exp-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 6px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: 0.12s;
+  }
+  .exp-card:hover { border-color: var(--cyan); }
+  .exp-card.routed {
+    border-color: var(--green);
+    background: #0d211d;
+    box-shadow: inset 0 0 8px rgba(74, 222, 128, 0.15);
+  }
+  .exp-card.sleeping {
+    border-color: var(--purple);
+    background: #1d142b;
+  }
+  .exp-card.selected-mag {
+    outline: 1.5px dashed var(--cyan);
+  }
+  .exp-top {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .fat-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: #1e293b;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 4px 0;
+  }
+  .fat-bar-fill {
+    height: 100%;
+    transition: width 0.2s ease;
+  }
+  .exp-meta {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 10.5px;
+  }
+  .magnifier-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  canvas#magCanvas {
+    width: 100%;
+    height: 165px;
+    background: #070a12;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span>🐈‍⬛ LocalSleep-MoE Web UI</span>
+    <span class="badge" id="hdrSession">session: --</span>
+    <span class="badge" id="hdrCore">core: --</span>
+  </div>
+  <div class="controls-row">
+    <button id="btnLoraToggle" class="lora-on" onclick="toggleLora()">🟢 LoRA: ON (Dynamic MoE)</button>
+    <select id="selLoopMode" onchange="pushConfig()">
+      <option value="mode1_vram">⚡ Mode 1: 零斷流 VRAM 閘門</option>
+      <option value="mode2_micro">🔬 Mode 2: 微切片 LogitBias</option>
+      <option value="mode0_off">👁️ Mode 0: 純觀測 (不干預)</option>
+    </select>
+    <label>α:<input type="number" id="inpAlpha" value="1.0" step="0.1" min="0" max="3" style="width:52px" onchange="pushConfig()"></label>
+    <select id="selCore" onchange="changeCore()" style="max-width:210px"></select>
+    <select id="selProfile" onchange="changeProfile()">
+      <option value="thor_31b">thor_31b (Gemma-4-31B)</option>
+      <option value="thor_4b">thor_4b (Nemotron-E4B)</option>
+    </select>
+    <input type="text" id="inpServerUrl" value="http://192.168.50.67:8000" style="width:175px" onchange="pushConfig()" title="遠端推論 Endpoint">
+    <label>Temp:<input type="number" id="inpTemp" value="0.6" step="0.05" min="0" max="2" style="width:50px" onchange="pushConfig()"></label>
+    <label>MaxTok:<input type="number" id="inpMaxTok" value="16384" step="512" min="256" max="32768" style="width:68px" onchange="pushConfig()"></label>
+  </div>
+</header>
+
+<div class="speed-ribbon">
+  <div class="metric"><span class="k">SPEED</span><span class="v green" id="mTps">0.00 tok/s</span></div>
+  <div class="metric"><span class="k">TTFT</span><span class="v" id="mTtft">0.0 ms</span></div>
+  <div class="metric"><span class="k">TOKENS</span><span class="v" id="mTokens">0</span></div>
+  <div class="metric"><span class="k">ELAPSED</span><span class="v" id="mElapsed">0.0s</span></div>
+  <div class="metric"><span class="k">ENTROPY (H)</span><span class="v amber" id="mEntropy">0.000</span></div>
+  <div class="metric"><span class="k">ACTIVE TOP-K</span><span class="v green" id="mRouted">[--]</span></div>
+  <div class="metric"><span class="k">NREM / 2:4 PRUNE</span><span class="v purple" id="mNrem">0 / 0</span></div>
+  <div class="metric"><span class="k">MEAN ||A||_F</span><span class="v" id="mMeanNorm">2.6000</span></div>
+  <div style="margin-left:auto; display:flex; gap:6px; align-items:center;">
+    <select id="selResume" style="max-width:210px"></select>
+    <button onclick="doAction('resume_session')">📂 續傳 Session</button>
+    <button onclick="doAction('new_session')">🆕 新對話</button>
+    <button onclick="doAction('save_ckpt')">💾 存權重</button>
+    <button class="danger" onclick="confirmResetCkpt()">🧹 重置權重</button>
+  </div>
+</div>
+
+<div class="workspace">
+  <!-- Left: Chat + Multi-line Input -->
+  <div class="chat-pane">
+    <div class="chat-log" id="chatLog"></div>
+    <div class="input-dock">
+      <textarea id="promptInput" placeholder="輸入多行推論指令（Ctrl+Enter 立即發送推論，Shift+Enter 換行，所有對話與神經遙測自動寫入 sessions/）..."></textarea>
+      <div class="input-actions">
+        <div style="display:flex; gap:10px; align-items:center; font-size:12px; color:var(--muted);">
+          <label><input type="checkbox" id="chkWmInject" checked onchange="pushConfig()"> 🧠 注入跨場次工作記憶</label>
+          <span id="statusText">🟢 Ready</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button onclick="clearChatView()">🧼 清除畫面</button>
+          <button class="danger" id="btnStop" onclick="stopStream()" disabled>🛑 中斷推論</button>
+          <button class="primary" id="btnSend" onclick="sendPrompt()">🚀 發送推論 (Ctrl+Enter)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Expert Fatigue & LoRA Magnifier -->
+  <div class="telemetry-pane">
+    <div class="sec-title">
+      <span>🧠 專家疲勞度 (Fatigue F) 與赫布範數</span>
+      <span style="font-size:11px; color:var(--muted);" id="lblExpCount">8/16 Experts</span>
+    </div>
+    <div class="expert-grid" id="expertGrid"></div>
+
+    <div class="magnifier-box">
+      <div class="sec-title" style="border:none; padding:0;">
+        <span id="magTitle">🔍 2:4 微觀突觸權重放大鏡 (Exp #0 | 12×24 Slice)</span>
+        <label style="font-size:11px; color:var(--muted); cursor:pointer;">
+          <input type="checkbox" id="chkMagEnable" checked onchange="renderMagnifier()"> 啟用放大鏡
+        </label>
+      </div>
+      <canvas id="magCanvas" width="400" height="175"></canvas>
+      <div style="display:flex; justify-content:space-between; font-size:10.5px; color:var(--muted);">
+        <span>⬛ 0.000 (2:4 剪枝歸零槽)</span>
+        <span>🟦 負向抑制突觸</span>
+        <span>🟧/🟨 正向赫布強化突觸</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let appState = null;
+let selectedMagExp = 0;
+let isStreaming = false;
+
+const promptEl = document.getElementById('promptInput');
+promptEl.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    sendPrompt();
+  }
+});
+
+async function fetchState() {
+  const incMag = document.getElementById('chkMagEnable').checked ? '1' : '0';
+  const res = await fetch(`/api/state?magnifier=${incMag}`);
+  const data = await res.json();
+  if (data.ok) {
+    populateSelectors(data.cores, data.sessions, data.state);
+    updateTelemetryUI(data.state);
+    if (data.history && document.getElementById('chatLog').children.length === 0) {
+      renderHistory(data.history);
+    }
+  }
+}
+
+function populateSelectors(cores, sessions, st) {
+  const selCore = document.getElementById('selCore');
+  if (cores && selCore.options.length !== cores.length) {
+    selCore.innerHTML = '';
+    cores.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.label;
+      selCore.appendChild(opt);
+    });
+  }
+  if (st) selCore.value = st.selected_cube || '';
+
+  const selRes = document.getElementById('selResume');
+  if (sessions) {
+    const curVal = selRes.value || 'latest';
+    selRes.innerHTML = '';
+    sessions.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = s.label;
+      selRes.appendChild(opt);
+    });
+    selRes.value = curVal;
+  }
+}
+
+function updateTelemetryUI(st) {
+  if (!st) return;
+  appState = st;
+  document.getElementById('hdrSession').textContent = `📄 ${st.session_file || '--'} (${st.history_turns} turns)`;
+  document.getElementById('hdrCore').textContent = `🧬 ${st.loaded_cube_id} (${st.num_experts}-LoRA)`;
+  document.getElementById('selProfile').value = st.profile;
+  document.getElementById('selLoopMode').value = st.loop_mode;
+  document.getElementById('inpAlpha').value = st.moe_alpha;
+  document.getElementById('inpServerUrl').value = st.server_url;
+  document.getElementById('inpTemp').value = st.temperature;
+  document.getElementById('inpMaxTok').value = st.max_tokens;
+  document.getElementById('chkWmInject').checked = !!st.wm_inject;
+
+  const btnLora = document.getElementById('btnLoraToggle');
+  if (st.lora_enabled) {
+    btnLora.className = 'lora-on';
+    btnLora.textContent = '🟢 LoRA: ON (Dynamic MoE)';
+  } else {
+    btnLora.className = 'lora-off';
+    btnLora.textContent = '⚪ LoRA: OFF (Vanilla Bypass)';
+  }
+
+  const ls = st.last_stats || {};
+  document.getElementById('mTps').textContent = `${(ls.tps || 0).toFixed(2)} tok/s`;
+  document.getElementById('mTtft').textContent = `${(ls.ttft_ms || 0).toFixed(1)} ms`;
+  document.getElementById('mTokens').textContent = `${ls.tokens || 0}`;
+  document.getElementById('mElapsed').textContent = `${(ls.elapsed || 0).toFixed(1)}s`;
+  document.getElementById('mEntropy').textContent = `${(ls.entropy || 0).toFixed(3)}`;
+  document.getElementById('mRouted').textContent = st.lora_enabled ? JSON.stringify(st.active_routed || []) : '[BYPASS]';
+  document.getElementById('mNrem').textContent = `${st.nrem_events || 0} / ${st.gpu_24_prunes || 0}`;
+  document.getElementById('mMeanNorm').textContent = `${(st.mean_norm || 2.6).toFixed(4)}`;
+  document.getElementById('lblExpCount').textContent = `${st.num_experts} Experts | Click card to inspect 2:4 weights`;
+
+  renderExpertCards(st.experts || []);
+  renderMagnifier();
+}
+
+function renderExpertCards(experts) {
+  const grid = document.getElementById('expertGrid');
+  grid.innerHTML = '';
+  experts.forEach(exp => {
+    const card = document.createElement('div');
+    let cls = 'exp-card';
+    if (exp.is_routed) cls += ' routed';
+    if (exp.state_code === 2) cls += ' sleeping';
+    if (exp.id === selectedMagExp) cls += ' selected-mag';
+    card.className = cls;
+    card.onclick = () => {
+      selectedMagExp = exp.id;
+      renderExpertCards(appState.experts || []);
+      renderMagnifier();
+    };
+
+    let stBadge = '🟢 ACT';
+    if (exp.state_code === 2) stBadge = `💤 NREM(${exp.sleep_cd})`;
+    else if (exp.is_routed) stBadge = '⚡ FIRE';
+    else if (exp.state_code === 1 || exp.fatigue > 0.65) stBadge = '🟠 FAT';
+
+    const fatPct = Math.min(100, Math.max(0, exp.fatigue * 100));
+    let barColor = '#38bdf8';
+    if (exp.state_code === 2) barColor = '#c084fc';
+    else if (fatPct > 75) barColor = '#f87171';
+    else if (fatPct > 45) barColor = '#f59e0b';
+    else if (exp.is_routed) barColor = '#4ade80';
+
+    const dSign = exp.delta_norm >= 0 ? '+' : '';
+    card.innerHTML = `
+      <div class="exp-top">
+        <span>Exp #${exp.id}</span>
+        <span>${stBadge}</span>
+      </div>
+      <div class="fat-bar-bg">
+        <div class="fat-bar-fill" style="width:${fatPct.toFixed(1)}%; background:${barColor}"></div>
+      </div>
+      <div class="exp-meta">
+        <span>F: <b>${exp.fatigue.toFixed(3)}</b></span>
+        <span>||A||: ${exp.norm.toFixed(3)} (${dSign}${exp.delta_norm.toFixed(3)})</span>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function renderMagnifier() {
+  const cvs = document.getElementById('magCanvas');
+  const ctx = cvs.getContext('2d');
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+
+  if (!document.getElementById('chkMagEnable').checked || !appState || !appState.experts) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px monospace';
+    ctx.fillText('🔍 權重放大鏡已暫停 (節省瀏覽器繪圖資源)', 45, 90);
+    return;
+  }
+
+  const exp = appState.experts[selectedMagExp] || appState.experts[0];
+  if (!exp) return;
+  document.getElementById('magTitle').textContent =
+    `🔍 2:4 微觀突觸放大鏡 (Exp #${exp.id} | ||A||_F=${exp.norm.toFixed(4)} | Sparsity=${exp.sparsity_pct}%)`;
+
+  const grid = exp.grid_12x24 || [];
+  const rows = grid.length;
+  const cols = rows > 0 ? grid[0].length : 0;
+  if (rows === 0 || cols === 0) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px monospace';
+    ctx.fillText('尚無 12×24 切片資料', 120, 90);
+    return;
+  }
+
+  const cw = cvs.width / cols;
+  const ch = cvs.height / rows;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const v = grid[r][c];
+      if (Math.abs(v) < 1e-6) {
+        ctx.fillStyle = '#090d16';
+      } else if (v > 0) {
+        const alpha = Math.min(1.0, 0.25 + Math.abs(v) * 18.0);
+        ctx.fillStyle = `rgba(245, 158, 11, ${alpha})`;
+      } else {
+        const alpha = Math.min(1.0, 0.25 + Math.abs(v) * 18.0);
+        ctx.fillStyle = `rgba(56, 189, 248, ${alpha})`;
+      }
+      ctx.fillRect(c * cw + 0.5, r * ch + 0.5, cw - 1, ch - 1);
+    }
+  }
+  // Draw 2:4 quad group dividers every 4 columns
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
+  ctx.lineWidth = 1;
+  for (let c = 4; c < cols; c += 4) {
+    ctx.beginPath();
+    ctx.moveTo(c * cw, 0);
+    ctx.lineTo(c * cw, cvs.height);
+    ctx.stroke();
+  }
+}
+
+async function toggleLora() {
+  if (!appState) return;
+  const nextVal = !appState.lora_enabled;
+  await sendConfig({ lora_enabled: nextVal });
+}
+
+async function changeCore() {
+  const cube = document.getElementById('selCore').value;
+  await sendConfig({ selected_cube: cube, action: 'reinit' });
+}
+
+async function changeProfile() {
+  const prof = document.getElementById('selProfile').value;
+  await sendConfig({ profile: prof, action: 'reinit' });
+}
+
+async function pushConfig() {
+  await sendConfig({
+    loop_mode: document.getElementById('selLoopMode').value,
+    moe_alpha: parseFloat(document.getElementById('inpAlpha').value || '1.0'),
+    server_url: document.getElementById('inpServerUrl').value,
+    temperature: parseFloat(document.getElementById('inpTemp').value || '0.6'),
+    max_tokens: parseInt(document.getElementById('inpMaxTok').value || '16384', 10),
+    wm_inject: document.getElementById('chkWmInject').checked
+  });
+}
+
+async function doAction(act) {
+  const resumeTarget = document.getElementById('selResume').value || 'latest';
+  const res = await sendConfig({ action: act, resume_target: resumeTarget });
+  if (res && res.history) {
+    document.getElementById('chatLog').innerHTML = '';
+    renderHistory(res.history);
+  }
+}
+
+async function confirmResetCkpt() {
+  if (!confirm('確定要將當前專家疲勞度與赫布權重重置回母體初始狀態嗎？（舊權重會自動備份於 checkpoints/snapshots/）')) return;
+  await doAction('reset_ckpt');
+}
+
+async function sendConfig(payload) {
+  const res = await fetch('/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (data.ok) {
+    populateSelectors(data.cores, data.sessions, data.state);
+    updateTelemetryUI(data.state);
+  }
+  return data;
+}
+
+function renderHistory(hist) {
+  const log = document.getElementById('chatLog');
+  hist.forEach(item => {
+    appendMessageBubble(item.role, item.content);
+  });
+}
+
+function appendMessageBubble(role, text, metaText = '') {
+  const log = document.getElementById('chatLog');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const hdr = document.createElement('div');
+  hdr.className = 'msg-hdr';
+  hdr.innerHTML = `<span>${role === 'user' ? '👤 Leon (User)' : '🐈‍⬛ Kuro (LocalSleep-MoE)'}</span><span class="meta-span">${metaText}</span>`;
+  const body = document.createElement('div');
+  body.className = 'msg-body';
+  body.textContent = text;
+  div.appendChild(hdr);
+  div.appendChild(body);
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return { div, body, metaSpan: hdr.querySelector('.meta-span') };
+}
+
+function clearChatView() {
+  document.getElementById('chatLog').innerHTML = '';
+}
+
+async function stopStream() {
+  await fetch('/api/stop', { method: 'POST' });
+}
+
+async function sendPrompt() {
+  if (isStreaming) return;
+  const text = promptEl.value.trim();
+  if (!text) return;
+
+  promptEl.value = '';
+  isStreaming = true;
+  document.getElementById('btnSend').disabled = true;
+  document.getElementById('btnStop').disabled = false;
+  document.getElementById('statusText').textContent = '⚡ Streaming Inference...';
+
+  appendMessageBubble('user', text, new Date().toLocaleTimeString());
+  const botBubble = appendMessageBubble('assistant', '', 'streaming...');
+
+  try {
+    const resp = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: text,
+        include_magnifier: document.getElementById('chkMagEnable').checked
+      })
+    });
+
+    if (!resp.ok) {
+      const errData = await resp.json();
+      botBubble.body.textContent = `[Error]: ${errData.error || resp.statusText}`;
+      return;
+    }
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() || '';
+
+      for (const block of parts) {
+        const lines = block.split('\n');
+        let evt = 'message';
+        let dataStr = '';
+        for (const l of lines) {
+          if (l.startsWith('event: ')) evt = l.slice(7).trim();
+          else if (l.startsWith('data: ')) dataStr += l.slice(6);
+        }
+        if (!dataStr) continue;
+        const payload = JSON.parse(dataStr);
+
+        if (evt === 'token') {
+          if (payload.piece) {
+            botBubble.body.textContent += payload.piece;
+            const log = document.getElementById('chatLog');
+            log.scrollTop = log.scrollHeight;
+          }
+          if (payload.stats) {
+            const s = payload.stats;
+            document.getElementById('mTps').textContent = `${(s.tps || 0).toFixed(2)} tok/s`;
+            document.getElementById('mTtft').textContent = `${(s.ttft_ms || 0).toFixed(1)} ms`;
+            document.getElementById('mTokens').textContent = `${s.tokens || 0}`;
+            document.getElementById('mElapsed').textContent = `${(s.elapsed || 0).toFixed(1)}s`;
+            document.getElementById('mEntropy').textContent = `${(s.entropy || 0).toFixed(3)}`;
+            botBubble.metaSpan.textContent = `${(s.tps || 0).toFixed(1)} tok/s | TTFT ${(s.ttft_ms || 0).toFixed(0)}ms | ${s.tokens || 0} toks`;
+          }
+          if (payload.routed) {
+            document.getElementById('mRouted').textContent = appState && appState.lora_enabled ? JSON.stringify(payload.routed) : '[BYPASS]';
+          }
+          if (payload.telemetry) {
+            updateTelemetryUI(payload.telemetry);
+          }
+        } else if (evt === 'done') {
+          if (payload.telemetry) updateTelemetryUI(payload.telemetry);
+          if (payload.stats) {
+            const s = payload.stats;
+            botBubble.metaSpan.textContent = `✅ ${(s.tps || 0).toFixed(2)} tok/s | TTFT ${(s.ttft_ms || 0).toFixed(0)}ms | ${s.tokens || 0} toks | ${payload.session_file || ''}`;
+          }
+        } else if (evt === 'error') {
+          botBubble.body.textContent += `\n[Stream Error]: ${payload.message}`;
+        }
+      }
+    }
+  } catch (err) {
+    botBubble.body.textContent += `\n[Network Error]: ${err.message}`;
+  } finally {
+    isStreaming = false;
+    document.getElementById('btnSend').disabled = false;
+    document.getElementById('btnStop').disabled = true;
+    document.getElementById('statusText').textContent = '🟢 Ready';
+  }
+}
+
+fetchState();
+setInterval(() => {
+  if (!isStreaming) fetchState();
+}, 5000);
+</script>
+</body>
+</html>

@@ -15,3 +15,16 @@ venv/
 .akashic.db
 isolated_output/
 sessions/
+fishbowl/organ_bay/
+fishbowl/rootfs/bin/
+fishbowl/rootfs/toolchain/
+fishbowl/rootfs/dev/fb0_rgba.raw
+fishbowl/rootfs/dev/mem_channels/*.bin
+fishbowl/rootfs/src/soma_env_agent_r*.rs
+fishbowl/src_bay/os_iter*.rs
+fishbowl/src_bay/os_step*.rs
+fishbowl/src_bay/soma_os_daemon_r[1-4].rs
+fishbowl/snapshots/*.raw
+fishbowl/active_os_daemon.*
+exports/*.npz
+exports/*.forge_state.json

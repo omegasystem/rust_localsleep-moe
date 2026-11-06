@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mellis HB-7 Flapping-Wing Robotic Pollinator Drone // 3D Teardown & Field Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+  :root {
+    --bg-center: #f7f4ee;
+    --bg-edge: #e6e1d6;
+    --card-bg: rgba(249, 247, 242, 0.88);
+    --card-border: #d5cfc2;
+    --ink: #1b1e24;
+    --muted: #7c786f;
+    --accent: #ff4f1f;
+    --accent-soft: rgba(255, 79, 31, 0.14);
+    --ok: #109868;
+  }
+  * { box-sizing: border-box; user-select: none; }
+  body {
+    margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden;
+    background: radial-gradient(circle at 50% 50%, var(--bg-center) 0%, var(--bg-edge) 100%);
+    color: var(--ink);
+    font-family: "JetBrains Mono", "SF Mono", "Consolas", monospace;
+    font-size: 11px;
+  }
+  #webgl-container { position: absolute; inset: 0; z-index: 1; cursor: grab; }
+  #webgl-container:active { cursor: grabbing; }
+  /* CAD Polar Reticle Overlay */
+  .cad-reticle {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 640px; height: 640px; border-radius: 50%;
+    border: 1px dashed rgba(27, 30, 36, 0.16);
+    pointer-events: none; z-index: 2;
+  }
+  .cad-reticle::before {
+    content: ""; position: absolute; inset: 85px; border-radius: 50%;
+    border: 1px solid rgba(27, 30, 36, 0.1);
+  }
+  /* Top Banner */
+  .top-bar {
+    position: absolute; top: 0; left: 0; right: 0; height: 64px; z-index: 10;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 22px 0 0; border-bottom: 1px solid var(--card-border);
+    background: rgba(247, 244, 238, 0.82); backdrop-filter: blur(8px);
+  }
+  .brand-block { display: flex; align-items: center; height: 100%; gap: 16px; }
+  .orange-tag {
+    height: 100%; background: var(--accent); color: #fff; font-weight: 800;
+    padding: 0 20px; display: flex; align-items: center; gap: 10px; font-size: 14px; letter-spacing: 1px;
+  }
+  .title-stack .sub { font-size: 9.5px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+  .title-stack .main { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: var(--ink); }
+  .title-stack .main span { color: var(--accent); }
+  .top-meta { display: flex; gap: 28px; align-items: center; font-size: 10px; }
+  .meta-item .k { color: var(--muted); font-size: 9px; text-transform: uppercase; }
+  .meta-item .v { font-weight: 700; font-size: 12px; margin-top: 2px; }
+  /* Side Columns */
+  .col-left, .col-right {
+    position: absolute; top: 78px; bottom: 88px; width: 285px; z-index: 10;
+    display: flex; flex-direction: column; gap: 10px; pointer-events: none;
+  }
+  .col-left { left: 18px; }
+  .col-right { right: 18px; }
+  .hud-card {
+    background: var(--card-bg); border: 1px solid var(--card-border);
+    border-radius: 6px; padding: 11px 13px; pointer-events: auto;
+    backdrop-filter: blur(10px); box-shadow: 0 4px 18px rgba(0,0,0,0.04);
+  }
+  .card-hdr {
+    display: flex; justify-content: space-between; align-items: center;
+    font-weight: 800; font-size: 10px; letter-spacing: 1px; margin-bottom: 8px;
+    border-left: 3px solid var(--ink); padding-left: 7px; text-transform: uppercase;
+  }
+  .card-hdr .num { color: var(--muted); font-weight: 400; }
+  .big-readout { display: flex; justify-content: space-between; align-items: baseline; margin: 4px 0 8px 0; }
+  .big-val { font-size: 24px; font-weight: 800; letter-spacing: -1px; }
+  .big-unit { font-size: 11px; color: var(--muted); margin-left: 3px; }
+  .pill-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+  .pill-btn {
+    background: #fff; border: 1px solid var(--card-border); border-radius: 3px;
+    padding: 4px 8px; font-family: inherit; font-size: 9.5px; font-weight: 700;
+    color: var(--ink); cursor: pointer; text-transform: uppercase; transition: 0.15s;
+  }
+  .pill-btn:hover { border-color: var(--accent); }
+  .pill-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .sub-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 0; border-bottom: 1px dashed rgba(0,0,0,0.08); cursor: pointer;
+  }
+  .sub-row:last-child { border-bottom: none; }
+  .sub-badge {
+    font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+    background: #e2ddd2; color: var(--ink);
+  }
+  .sub-badge.detached { background: var(--accent); color: #fff; }
+  .bar-track { flex: 1; height: 5px; background: #e2ddd2; border-radius: 2px; margin: 0 8px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--accent); transition: width 0.1s; }
+  /* Bottom Timeline Bar */
+  .bottom-bar {
+    position: absolute; left: 320px; right: 320px; bottom: 18px; z-index: 10;
+    background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 6px;
+    padding: 10px 16px; display: flex; align-items: center; gap: 14px;
+    backdrop-filter: blur(10px);
+  }
+  .play-btn {
+    width: 34px; height: 34px; border-radius: 50%; border: none;
+    background: var(--accent); color: #fff; font-weight: bold; cursor: pointer; font-size: 13px;
+  }
+  input[type="range"].scrub { flex: 1; accent-color: var(--accent); cursor: pointer; }
+  .mode-watermark {
+    position: absolute; left: 325px; bottom: 86px; z-index: 5; pointer-events: none;
+  }
+  .mode-watermark .lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .mode-watermark .val { font-size: 24px; font-weight: 900; color: var(--accent); letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<div class="cad-reticle"></div>
+<div id="webgl-container"></div>
+
+<div class="top-bar">
+  <div class="brand-block">
+    <div class="orange-tag" id="hdr-code">⚙️ HB-7</div>
+    <div class="title-stack">
+      <div class="sub" id="hdr-category">ROBOTIC ACTUATOR // PROCEDURAL 3D TEARDOWN SIMULATOR</div>
+      <div class="main" id="hdr-title">Mellis HB-7 <span>/</span></div>
+    </div>
+  </div>
+  <div class="top-meta">
+    <div class="meta-item"><div class="k">EXPLODE SEPARATION</div><div class="v" id="meta-explode">0%</div></div>
+    <div class="meta-item"><div class="k">SIM ID</div><div class="v">KL-022-THOR</div></div>
+    <div class="meta-item"><div class="k">RUNTIME</div><div class="v" id="meta-runtime">00:00.0</div></div>
+    <div class="meta-item"><div class="k">STATUS</div><div class="v" style="color:var(--accent)" id="meta-status">● OPERATIONAL</div></div>
+  </div>
+</div>
+
+<div class="col-left">
+  <div class="hud-card">
+    <div class="card-hdr"><span>PRIMARY KINEMATICS</span><span class="num">01</span></div>
+    <div class="big-readout">
+      <div><span class="big-val" id="kin-freq">0.0</span><span class="big-unit" id="kin-unit1">HZ</span></div>
+      <div><span class="big-val" id="kin-amp">±0</span><span class="big-unit" id="kin-unit2">DEG</span></div>
+    </div>
+    <canvas id="wave-canvas" width="255" height="58" style="width:100%; height:58px; background:rgba(0,0,0,0.03); border-radius:3px;"></canvas>
+    <div style="display:flex; justify-content:space-between; color:var(--muted); font-size:9px; margin-top:5px;">
+      <span>DRIVE SPEED</span>
+      <input type="range" id="sl-speed" min="0" max="2.5" step="0.05" value="1.0" style="width:120px; accent-color:var(--accent);">
+    </div>
+  </div>
+
+  <div class="hud-card">
+    <div class="card-hdr"><span>POWER & THERMAL</span><span class="num">02</span></div>
+    <div class="big-readout">
+      <div><span class="big-val" id="pwr-pct">88%</span><span class="big-unit">LOAD</span></div>
+      <div id="pwr-bars" style="display:flex; gap:3px;"></div>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:6px; border-top:1px solid var(--card-border); padding-top:6px;">
+      <div><div style="color:var(--muted);font-size:8.5px">DRAW</div><div style="font-weight:800" id="pwr-watts">14.2 W</div></div>
+      <div><div style="color:var(--muted);font-size:8.5px">BUS</div><div style="font-weight:800" id="pwr-volts">24.0 V</div></div>
+      <div><div style="color:var(--muted);font-size:8.5px">CORE TEMP</div><div style="font-weight:800" id="pwr-temp">41.5 °C</div></div>
+    </div>
+  </div>
+
+  <div class="hud-card" style="flex:1; display:flex; flex-direction:column;">
+    <div class="card-hdr"><span>ACTUATOR TORQUE CHANNELS</span><span class="num">03</span></div>
+    <div id="torque-list" style="display:flex; flex-direction:column; gap:7px; margin-top:4px;"></div>
+  </div>
+</div>
+
+<div class="col-right">
+  <div class="hud-card">
+    <div class="card-hdr"><span>SPATIAL ORIENTATION</span><span class="num">04</span></div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:10px;">
+      <div>PITCH: <b id="ori-pitch">0.0°</b></div>
+      <div>ROLL: <b id="ori-roll">0.0°</b></div>
+      <div>YAW: <b id="ori-yaw">0.0°</b></div>
+      <div>STRESS: <b id="ori-stress">12 MPa</b></div>
+    </div>
+  </div>
+
+  <div class="hud-card">
+    <div class="card-hdr"><span>ISOLATE ASSEMBLIES</span><span class="num">05</span></div>
+    <div class="pill-grid" id="assembly-pills"></div>
+  </div>
+
+  <div class="hud-card">
+    <div class="card-hdr"><span>DISPLAY & TEARDOWN MODE</span><span class="num">06</span></div>
+    <div class="pill-grid">
+      <button class="pill-btn" id="btn-exploded" onclick="toggleExplode()">EXPLODED VIEW</button>
+      <button class="pill-btn active" id="btn-turntable" onclick="toggleTurntable()">TURNTABLE</button>
+      <button class="pill-btn" id="btn-wireframe" onclick="toggleWireframe()">X-RAY WIRE</button>
+      <button class="pill-btn active" id="btn-autotour" onclick="toggleAutoTour()">AUTO TOUR</button>
+    </div>
+    <div style="margin-top:8px; display:flex; align-items:center; gap:8px; font-size:9.5px;">
+      <span>EXPLODE:</span>
+      <input type="range" id="sl-explode" min="0" max="1" step="0.01" value="0.45" style="flex:1; accent-color:var(--accent);" oninput="onExplodeSlider(this.value)">
+    </div>
+  </div>
+
+  <div class="hud-card" style="flex:1; overflow-y:auto;">
+    <div class="card-hdr"><span>SUBSYSTEM TEARDOWN (CLICK TO DETACH)</span><span class="num">07</span></div>
+    <div id="subsystems-list"></div>
+  </div>
+</div>
+
+<div class="mode-watermark">
+  <div class="lbl">TEARDOWN STATE</div>
+  <div class="val" id="watermark-state">REASSEMBLY</div>
+</div>
+
+<div class="bottom-bar">
+  <button class="play-btn" id="btn-play" onclick="togglePlay()">❚❚</button>
+  <div style="flex:1; display:flex; flex-direction:column; gap:3px;">
+    <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--muted);">
+      <span>00:00 TAKE-OFF / ASSEMBLED</span>
+      <span id="tour-caption" style="color:var(--accent); font-weight:700;">AUTO-TOUR ACTIVE // CLICK ANY PART OR BUTTON TO TAKE CONTROL</span>
+      <span>24:00 FULL TEARDOWN</span>
+    </div>
+    <input type="range" class="scrub" id="sl-timeline" min="0" max="24" step="0.05" value="0" oninput="onScrubTimeline(this.value)">
+  </div>
+</div>
+
+<script>
+// === GLOBAL SIMULATOR STATE ===
+const simState = {
+  t: 0,
+  playing: true,
+  speed: 1.0,
+  explode: 0.45,
+  targetExplode: 0.45,
+  turntable: true,
+  wireframe: false,
+  autoTour: true,
+  isolatedId: 'ALL',
+  detachedMap: {},
+  waveHistory: new Array(64).fill(0),
+};
+
+// === SLOT 1: KINEMATICS & SUBSYSTEM DEFINITIONS (Generated by LocalSleep-MoE) ===
+const MACHINE_META = {
+  code: 'Mellis-HB7-FP',
+  title: 'Mellis HB-7 Flapping-Wing Robotic Pollinator Drone',
+  category: 'Biomimetic Micro-Aerial Vehicle',
+  primaryUnit: 'HZ',
+  secondaryUnit: 'DEG'
+};
+
+const SUBSYSTEM_DEFS = [
+  {
+    id: 'SUB_01',
+    shortName: 'WING_DRV',
+    name: 'PIEZOELECTRIC WING ACTUATOR',
+    spec: '120Hz RESONANCE · PZT-5H',
+    homePos: [0, 0, 0],
+    explodeVec: [0, 1.2, 2.5]
+  },
+  {
+    id: 'SUB_02',
+    shortName: 'SENS_HULL',
+    name: 'SENSORY EXOSKELETON',
+    spec: 'CARBON-FIBER · 0.8g MASS',
+    homePos: [0, 0, 0],
+    explodeVec: [-2.1, 0.5, 0.8]
+  },
+  {
+    id: 'SUB_03',
+    shortName: 'PWR_MOD',
+    name: 'MICRO-ENERGY MODULE',
+    spec: '3.7V LiPo · 150mAh',
+    homePos: [0, 0, 0],
+    explodeVec: [0, -1.5, -1.2]
+  },
+  {
+    id: 'SUB_04',
+    shortName: 'NAV_CORE',
+    name: 'FLIGHT CONTROL UNIT',
+    spec: 'ARM CORTEX-M4 · 6-AXIS IMU',
+    homePos: [0, 0, 0],
+    explodeVec: [1.8, -0.2, 0.5]
+  },
+  {
+    id: 'SUB_05',
+    shortName: 'POLL_COLL',
+    name: 'POLLEN COLLECTION ARRAY',
+    spec: 'ELECTROSTATIC ADHESION',
+    homePos: [0, 0, 0],
+    explodeVec: [0, 0, -3.1]
+  },
+  {
+    id: 'SUB_06',
+    shortName: 'OPT_SENS',
+    name: 'BIONIC VISION SYSTEM',
+    spec: 'COMPOUND EYE · 4K RESOLUTION',
+    homePos: [0, 0, 0],
+    explodeVec: [2.5, 1.1, -0.4]
+  }
+];
+
+function computeKinematics(t, simState) {
+  const speed = simState.speed || 1.0;
+  const freqBase = 120 * speed;
+  const phase = t * freqBase * 2 * Math.PI;
+
+  // Calculate primary oscillation (Wing Beat Frequency)
+  const primaryVal = freqBase + (Math.sin(t * 2) * 2);
+  const secondaryVal = (Math.sin(phase) * 45).toFixed(2);
+  
+  // Power and Thermal dynamics
+  const loadPct = Math.min(100, (speed * 65) + (Math.random() * 5));
+  const powerWatts = (loadPct / 100) * 1.2;
+  const busVolts = 3.7 - (loadPct / 100) * 0.4;
+  const tempC = 22 + (loadPct * 0.15);
+
+  // Flight Attitude
+  const pitch = (Math.sin(t * 0.5) * 5).toFixed(2);
+  const roll = (Math.cos(t * 0.8) * 3).toFixed(2);
+  const stressMpa = (speed * 12.5 * (1 + Math.sin(phase))).toFixed(2);
+
+  // Waveform sample for visualization
+  const waveSample = Array.from({ length: 10 }, (_, i) => 
+    Math.sin(phase + (i * 0.6)) * 1.0
+  );
+
+  return {
+    primaryVal: primaryVal.toFixed(2),
+    secondaryVal: secondaryVal,
+    loadPct: loadPct.toFixed(1),
+    powerWatts: powerWatts.toFixed(3),
+    busVolts: busVolts.toFixed(2),
+    tempC: tempC.toFixed(1),
+    pitch: pitch,
+    roll: roll,
+    stressMpa: stressMpa,
+    waveSample: waveSample,
+    angles: {
+      wingLeft: (Math.sin(phase) * 30).toFixed(2),
+      wingRight: (Math.sin(phase + Math.PI) * 30).toFixed(2),
+      thoraxPitch: pitch
+    },
+    channels: [
+      { label: 'CH1_L_ACT', pct: 70 + Math.sin(phase) * 30, val: `${(1.2 * speed).toFixed(2)} V` },
+      { label: 'CH2_R_ACT', pct: 70 + Math.sin(phase + Math.PI) * 30, val: `${(1.2 * speed).toFixed(2)} V` },
+      { label: 'CH3_IMU_X', pct: 40 + Math.cos(t) * 10, val: `${(roll * 0.1).toFixed(3)} g` },
+      { label: 'CH4_IMU_Y', pct: 50 + Math.sin(t) * 10, val: `${(pitch * 0.1).toFixed(3)} g` },
+      { label: 'CH5_BATT', pct: 95 - (t * 0.1), val: `${busVolts} V` },
+      { label: 'CH6_SENS', pct: 30 + Math.random() * 20, val: '12.4 pA' }
+    ]
+  };
+}
+
+// === SLOT 2: PROCEDURAL 3D GEOMETRY & POSE UPDATER (Generated by LocalSleep-MoE) ===
+function buildMachineGeometry(THREE, rootGroup) {
+  const groups = {};
+  
+  const mats = {
+    carbon: new THREE.MeshStandardMaterial({ color: 0x22262e, roughness: 0.45, metalness: 0.6 }),
+    silver: new THREE.MeshStandardMaterial({ color: 0xd8dee9, roughness: 0.3, metalness: 0.8 }),
+    orange: new THREE.MeshStandardMaterial({ color: 0xff4f1f, roughness: 0.35, metalness: 0.2 })
+  };
+
+  SUBSYSTEM_DEFS.forEach(s => {
+    const grp = new THREE.Group();
+    rootGroup.add(grp);
+    groups[s.id] = grp;
+
+    if (s.id === 'SUB_01') { // PIEZOELECTRIC WING ACTUATOR
+      // Main Actuator Base
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.6), mats.silver);
+      grp.add(base);
+      
+      // Left Wing Assembly
+      const wingL = new THREE.Group();
+      const wingL_blade = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.02, 0.8), mats.carbon);
+      wingL_blade.position.x = 1.1;
+      const wingL_joint = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.05, 8, 16), mats.orange);
+      wingL.add(wingL_blade, wingL_joint);
+      wingL.position.x = -0.2;
+      grp.add(wingL);
+      
+      // Right Wing Assembly
+      const wingR = new THREE.Group();
+      const wingR_blade = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.02, 0.8), mats.carbon);
+      wingR_blade.position.x = -1.1;
+      const wingR_joint = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.05, 8, 16), mats.orange);
+      wingR.add(wingR_blade, wingR_joint);
+      wingR.position.x = 0.2;
+      grp.add(wingR);
+
+      grp.userData.wingL = wingL;
+      grp.userData.wingR = wingR;
+    }
+
+    if (s.id === 'SUB_02') { // SENSORY EXOSKELETON
+      const hull = new THREE.Mesh(new THREE.SphereGeometry(0.6, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), mats.carbon);
+      hull.scale.set(1, 0.6, 1.2);
+      grp.add(hull);
+      
+      const frame = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.03, 16, 32), mats.silver);
+      frame.rotation.x = Math.PI / 2;
+      grp.add(frame);
+    }
+
+    if (s.id === 'SUB_03') { // MICRO-ENERGY MODULE
+      const cell = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.3, 0.3), mats.silver);
+      grp.add(cell);
+      
+      const contact = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.1), mats.orange);
+      contact.position.y = 0.2;
+      grp.add(contact);
+    }
+
+    if (s.id === 'SUB_04') { // FLIGHT CONTROL UNIT
+      const chip = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.05, 0.3), mats.silver);
+      grp.add(chip);
+      
+      const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.4), mats.carbon);
+      antenna.position.y = 0.2;
+      grp.add(antenna);
+      
+      const heatSink = new THREE.Group();
+      for(let i=0; i<5; i++) {
+        const fin = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.2), mats.silver);
+        fin.position.y = i * 0.04;
+        heatSink.add(fin);
+      }
+      heatSink.position.y = -0.1;
+      grp.add(heatSink);
+      grp.userData.heatSink = heatSink;
+    }
+
+    if (s.id === 'SUB_05') { // POLLEN COLLECTION ARRAY
+      const collector = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 16), mats.orange);
+      collector.rotation.x = Math.PI;
+      grp.add(collector);
+      
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.02, 8, 24), mats.silver);
+      ring.rotation.x = Math.PI / 2;
+      grp.add(ring);
+      grp.userData.ring = ring;
+    }
+
+    if (s.id === 'SUB_06') { // BIONIC VISION SYSTEM
+      const eyeBase = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 12), mats.carbon);
+      grp.add(eyeBase);
+      
+      const lens = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 12), mats.silver);
+      lens.position.z = 0.1;
+      grp.add(lens);
+      
+      const iris = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.01, 8, 16), mats.orange);
+      iris.position.z = 0.17;
+      grp.add(iris);
+      grp.userData.lens = lens;
+    }
+  });
+
+  return groups;
+}
+
+function updateMachinePose(groups, kin, simState) {
+  const t = simState.t;
+  const speed = simState.speed || 1.0;
+
+  // 1. Wing Flapping (SUB_01)
+  const wingDrv = groups['SUB_01'];
+  if (wingDrv) {
+    const angleL = parseFloat(kin.angles.wingLeft) * (Math.PI / 180);
+    const angleR = parseFloat(kin.angles.wingRight) * (Math.PI / 180);
+    
+    wingDrv.userData.wingL.rotation.z = angleL;
+    wingDrv.userData.wingR.rotation.z = angleR;
+    
+    // Add a slight high-frequency jitter based on resonance
+    wingDrv.position.y = Math.sin(t * 120 * speed) * 0.01;
+  }
+
+  // 2. Flight Attitude (Global rotation simulation)
+  const pitch = parseFloat(kin.pitch) * (Math.PI / 180);
+  const roll = parseFloat(kin.roll) * (Math.PI / 180);
+  
+  Object.values(groups).forEach(grp => {
+    grp.rotation.x = pitch * 0.5;
+    grp.rotation.z = roll * 0.5;
+  });
+
+  // 3. Internal Mechanical Rotations
+  // Pollen Collector Ring Rotation
+  const pollColl = groups['SUB_05'];
+  if (pollColl && pollColl.userData.ring) {
+    pollColl.userData.ring.rotation.y += 0.05 * speed;
+  }
+
+  // Vision System Focus/Saccade
+  const optSens = groups['SUB_06'];
+  if (optSens && optSens.userData.lens) {
+    optSens.userData.lens.position.x = Math.sin(t * 2) * 0.02;
+    optSens.userData.lens.position.y = Math.cos(t * 1.5) * 0.02;
+  }
+
+  // HeatSink Vibration
+  const navCore = groups['SUB_04'];
+  if (navCore && navCore.userData.heatSink) {
+    navCore.userData.heatSink.position.x = Math.sin(t * 50 * speed) * 0.005;
+  }
+}
+
+// === THREE.JS STAGE & INTERACTIVE CONTROLLER ===
+let scene, camera, renderer, rootGroup, subsystemGroups = {}, leaderLines = [];
+let isDragging = false, prevMouse = {x: 0, y: 0}, spherical = {theta: 0.6, phi: 1.15, radius: 9.5};
+
+function initStage() {
+  const container = document.getElementById('webgl-container');
+  scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 100);
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  container.appendChild(renderer.domElement);
+
+  const amb = new THREE.AmbientLight(0xffffff, 0.85);
+  scene.add(amb);
+  const dir1 = new THREE.DirectionalLight(0xfff8f0, 0.9);
+  dir1.position.set(8, 14, 10);
+  scene.add(dir1);
+  const dir2 = new THREE.DirectionalLight(0xff4f1f, 0.35);
+  dir2.position.set(-8, -5, -6);
+  scene.add(dir2);
+
+  rootGroup = new THREE.Group();
+  scene.add(rootGroup);
+
+  subsystemGroups = buildMachineGeometry(THREE, rootGroup);
+
+  // Build orange dashed leader lines for exploded view
+  const lineMat = new THREE.LineBasicMaterial({ color: 0xff4f1f, transparent: true, opacity: 0.55 });
+  Object.keys(subsystemGroups).forEach(k => {
+    const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    const line = new THREE.Line(geo, lineMat);
+    rootGroup.add(line);
+    leaderLines.push({ key: k, line });
+  });
+
+  // Mouse Orbit
+  container.addEventListener('mousedown', e => { isDragging = true; prevMouse = {x: e.clientX, y: e.clientY}; simState.autoTour = false; updateButtons(); });
+  window.addEventListener('mouseup', () => isDragging = false);
+  window.addEventListener('mousemove', e => {
+    if (!isDragging) return;
+    spherical.theta -= (e.clientX - prevMouse.x) * 0.008;
+    spherical.phi = Math.max(0.25, Math.min(2.8, spherical.phi - (e.clientY - prevMouse.y) * 0.008));
+    prevMouse = {x: e.clientX, y: e.clientY};
+  });
+  container.addEventListener('wheel', e => {
+    spherical.radius = Math.max(4.5, Math.min(18, spherical.radius + e.deltaY * 0.005));
+  });
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  initHudControls();
+  requestAnimationFrame(animateLoop);
+}
+
+function initHudControls() {
+  if (typeof MACHINE_META !== 'undefined') {
+    document.getElementById('hdr-code').textContent = '⚙️ ' + (MACHINE_META.code || 'HB-7');
+    document.getElementById('hdr-category').textContent = MACHINE_META.category || 'PROCEDURAL 3D SIMULATOR';
+    document.getElementById('hdr-title').innerHTML = (MACHINE_META.title || 'Mellis HB-7') + ' <span>/</span>';
+    document.getElementById('kin-unit1').textContent = MACHINE_META.primaryUnit || 'HZ';
+    document.getElementById('kin-unit2').textContent = MACHINE_META.secondaryUnit || 'DEG';
+  }
+  const pillsDiv = document.getElementById('assembly-pills');
+  const subListDiv = document.getElementById('subsystems-list');
+  pillsDiv.innerHTML = '<button class="pill-btn active" onclick="selectIsolate(\'ALL\')">ALL</button>';
+  subListDiv.innerHTML = '';
+
+  (SUBSYSTEM_DEFS || []).forEach((s, idx) => {
+    simState.detachedMap[s.id] = true;
+    const b = document.createElement('button');
+    b.className = 'pill-btn';
+    b.dataset.id = s.id;
+    b.textContent = s.shortName || s.id;
+    b.onclick = () => selectIsolate(s.id);
+    pillsDiv.appendChild(b);
+
+    const row = document.createElement('div');
+    row.className = 'sub-row';
+    row.onclick = () => toggleSubsystemDetach(s.id);
+    row.innerHTML = `
+      <div>
+        <div style="font-weight:800">${String(idx+1).padStart(2,'0')} ${s.name}</div>
+        <div style="font-size:9px;color:var(--muted)">${s.spec || ''}</div>
+      </div>
+      <span class="sub-badge detached" id="badge-${s.id}">DETACHED</span>
+    `;
+    subListDiv.appendChild(row);
+  });
+
+  const pwrBars = document.getElementById('pwr-bars');
+  for (let i = 0; i < 10; i++) {
+    const d = document.createElement('div');
+    d.style.cssText = 'width:7px;height:16px;border-radius:1px;background:' + (i < 7 ? 'var(--ok)' : (i < 9 ? 'var(--accent)' : '#d5cfc2'));
+    pwrBars.appendChild(d);
+  }
+  document.getElementById('sl-speed').addEventListener('input', e => simState.speed = parseFloat(e.target.value));
+}
+
+function selectIsolate(id) {
+  simState.isolatedId = id;
+  simState.autoTour = false;
+  document.querySelectorAll('#assembly-pills .pill-btn').forEach(b => {
+    b.classList.toggle('active', (b.dataset.id || 'ALL') === id);
+  });
+  updateButtons();
+}
+
+function toggleSubsystemDetach(id) {
+  simState.autoTour = false;
+  simState.detachedMap[id] = !simState.detachedMap[id];
+  const badge = document.getElementById('badge-' + id);
+  if (badge) {
+    badge.textContent = simState.detachedMap[id] ? 'DETACHED' : 'ATTACHED';
+    badge.classList.toggle('detached', simState.detachedMap[id]);
+  }
+  updateButtons();
+}
+
+function toggleExplode() {
+  simState.autoTour = false;
+  simState.targetExplode = simState.targetExplode > 0.2 ? 0.0 : 0.75;
+  document.getElementById('sl-explode').value = simState.targetExplode;
+  updateButtons();
+}
+function onExplodeSlider(val) {
+  simState.autoTour = false;
+  simState.targetExplode = parseFloat(val);
+  simState.explode = simState.targetExplode;
+  updateButtons();
+}
+function toggleTurntable() { simState.turntable = !simState.turntable; updateButtons(); }
+function toggleWireframe() {
+  simState.wireframe = !simState.wireframe;
+  rootGroup.traverse(obj => { if (obj.isMesh && obj.material) obj.material.wireframe = simState.wireframe; });
+  updateButtons();
+}
+function toggleAutoTour() { simState.autoTour = !simState.autoTour; updateButtons(); }
+function togglePlay() {
+  simState.playing = !simState.playing;
+  document.getElementById('btn-play').textContent = simState.playing ? '❚❚' : '▶';
+}
+function onScrubTimeline(val) {
+  simState.t = parseFloat(val);
+  simState.autoTour = false;
+  updateButtons();
+}
+function updateButtons() {
+  document.getElementById('btn-exploded').classList.toggle('active', simState.targetExplode > 0.15);
+  document.getElementById('btn-turntable').classList.toggle('active', simState.turntable);
+  document.getElementById('btn-wireframe').classList.toggle('active', simState.wireframe);
+  document.getElementById('btn-autotour').classList.toggle('active', simState.autoTour);
+}
+
+let lastFrameMs = performance.now();
+function animateLoop(nowMs) {
+  const dt = Math.min(0.05, (nowMs - lastFrameMs) / 1000);
+  lastFrameMs = nowMs;
+
+  if (simState.playing) {
+    simState.t = (simState.t + dt * simState.speed) % 24.0;
+    document.getElementById('sl-timeline').value = simState.t.toFixed(2);
+  }
+
+  if (simState.autoTour) {
+    const phase = simState.t / 24.0;
+    simState.targetExplode = phase < 0.25 ? 0.0 : (phase < 0.65 ? 0.72 : 0.35);
+    document.getElementById('sl-explode').value = simState.targetExplode.toFixed(2);
+    document.getElementById('tour-caption').textContent =
+      phase < 0.25 ? 'PHASE 1 // ASSEMBLED NOMINAL OPERATION' :
+      (phase < 0.65 ? 'PHASE 2 // FULL SUBSYSTEM EXPLODED TEARDOWN' : 'PHASE 3 // DYNAMIC REASSEMBLY DIAGNOSTIC');
+  }
+
+  simState.explode += (simState.targetExplode - simState.explode) * 0.08;
+  if (simState.turntable && !isDragging) spherical.theta += dt * 0.35;
+
+  camera.position.x = spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta);
+  camera.position.y = spherical.radius * Math.cos(spherical.phi);
+  camera.position.z = spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta);
+  camera.lookAt(0, 0, 0);
+
+  const kin = computeKinematics(simState.t, simState);
+  updateMachinePose(subsystemGroups, kin, simState);
+
+  // Update subsystem explode positions & leader lines
+  (SUBSYSTEM_DEFS || []).forEach(s => {
+    const grp = subsystemGroups[s.id];
+    if (!grp) return;
+    const effExplode = simState.detachedMap[s.id] ? simState.explode : 0.0;
+    const hx = (s.homePos && s.homePos[0]) || 0;
+    const hy = (s.homePos && s.homePos[1]) || 0;
+    const hz = (s.homePos && s.homePos[2]) || 0;
+    const ex = hx + ((s.explodeVec && s.explodeVec[0]) || 0) * effExplode;
+    const ey = hy + ((s.explodeVec && s.explodeVec[1]) || 0) * effExplode;
+    const ez = hz + ((s.explodeVec && s.explodeVec[2]) || 0) * effExplode;
+    grp.position.set(ex, ey, ez);
+
+    const visible = (simState.isolatedId === 'ALL' || simState.isolatedId === s.id);
+    grp.visible = visible;
+
+    const lObj = leaderLines.find(l => l.key === s.id);
+    if (lObj) {
+      lObj.line.visible = visible && effExplode > 0.05;
+      const posArr = lObj.line.geometry.attributes.position.array;
+      posArr[0] = hx; posArr[1] = hy; posArr[2] = hz;
+      posArr[3] = ex; posArr[4] = ey; posArr[5] = ez;
+      lObj.line.geometry.attributes.position.needsUpdate = true;
+    }
+  });
+
+  // Update HUD Readouts (Number-safe coercion for LLM string/number outputs)
+  const num = (v, def = 0) => { const n = parseFloat(Array.isArray(v) ? v[0] : v); return Number.isFinite(n) ? n : def; };
+  document.getElementById('meta-explode').textContent = Math.round(simState.explode * 100) + '%';
+  document.getElementById('meta-runtime').textContent = '00:' + simState.t.toFixed(1).padStart(4, '0');
+  document.getElementById('watermark-state').textContent = simState.explode > 0.35 ? 'REASSEMBLY' : 'OPERATIONAL';
+  document.getElementById('kin-freq').textContent = num(kin.primaryVal, 0).toFixed(1);
+  const secV = num(kin.secondaryVal, 0);
+  document.getElementById('kin-amp').textContent = (secV >= 0 ? '+' : '') + secV.toFixed(1);
+  document.getElementById('pwr-pct').textContent = Math.round(num(kin.loadPct, 80)) + '%';
+  document.getElementById('pwr-watts').textContent = num(kin.powerWatts, 12.4).toFixed(1) + ' W';
+  document.getElementById('pwr-volts').textContent = num(kin.busVolts, 24.0).toFixed(1) + ' V';
+  document.getElementById('pwr-temp').textContent = num(kin.tempC, 42.0).toFixed(1) + ' °C';
+  document.getElementById('ori-pitch').textContent = num(kin.pitch, 0).toFixed(1) + '°';
+  document.getElementById('ori-roll').textContent = num(kin.roll, 0).toFixed(1) + '°';
+  document.getElementById('ori-yaw').textContent = ((spherical.theta * 57.3) % 360).toFixed(0) + '°';
+  document.getElementById('ori-stress').textContent = num(kin.stressMpa, 18.5).toFixed(1) + ' MPa';
+
+  // Torque Channels
+  const tList = document.getElementById('torque-list');
+  if (kin.channels && tList) {
+    tList.innerHTML = kin.channels.map(ch => `
+      <div style="display:flex; align-items:center; font-size:9.5px;">
+        <span style="width:68px;font-weight:700">${ch.label}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, Math.max(5, num(ch.pct, 50)))}%"></div></div>
+        <span style="width:52px;text-align:right;color:var(--muted)">${ch.val}</span>
+      </div>
+    `).join('');
+  }
+
+  // Draw Waveform Canvas
+  simState.waveHistory.push(num(kin.waveSample, Math.sin(simState.t * 6)));
+  if (simState.waveHistory.length > 64) simState.waveHistory.shift();
+  const cvs = document.getElementById('wave-canvas');
+  const ctx = cvs.getContext('2d');
+  ctx.clearRect(0, 0, cvs.width, cvs.height);
+  ctx.strokeStyle = '#ff4f1f';
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  simState.waveHistory.forEach((v, i) => {
+    const x = (i / 63) * cvs.width;
+    const y = cvs.height * 0.5 - v * (cvs.height * 0.38);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  renderer.render(scene, camera);
+  requestAnimationFrame(animateLoop);
+}
+
+window.addEventListener('DOMContentLoaded', initStage);
+</script>
+</body>
+</html>

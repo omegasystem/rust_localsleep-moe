@@ -282,10 +282,13 @@ class EvolvedSubagentCore:
             "from evolved_subagent_core import EvolvedSubagentCore",
             "if __name__ == '__main__':",
             "    # 1. Benchmark actual LLM-authored EvolvedCoreFatigueRouter vs Unpruned Skewed Baseline!",
-            "    evol_r = EvolvedCoreFatigueRouter(num_experts=8, hidden_dim=5376, top_k=2, fatigue_threshold=1.6)",
+            "    evol_r = EvolvedCoreFatigueRouter(num_experts=16, hidden_dim=5376, top_k=2, fatigue_threshold=1.6)",
             "    tokens = list(range(1, 513))",
-            "    # Baseline skewed un-homeostatic routing (concentrates load on E0..E3)",
+            "    # Warmup pass to eliminate first-run CUDA kernel / PyTorch init jitter!",
             "    core = EvolvedSubagentCore()",
+            "    _ = core.step_baseline_serial(tokens[:32])",
+            "    _ = core.step_evolved_vectorized_dispersed(tokens[:32])",
+            "    # Baseline skewed un-homeostatic routing (concentrates load on E0..E3)",
             "    base_m = core.step_baseline_serial(tokens)",
             "    t1 = time.perf_counter()",
             "    for t in tokens:",
@@ -344,20 +347,25 @@ if __name__ == "__main__":
         # Ask Thor 31B to autonomously write a brand-new `evolved_router_plugin.py`!
         llm_plugin_code = ""
         llm_author_mode = "deterministic_fallback"
-        # Detect if user steer requests a different number of LoRA experts or custom/auto Top-K!
-        target_num_experts = 8
+        # Inherit 16-LoRA by default from gen_018 (or override if user steer specifies 12/16/24/32)
+        target_num_experts = 16
         for s_item in steer_notes:
-            m_exp = re.search(r"\b(12|16|24|32)\s*(?:顆|個)?\s*lora\b", s_item, flags=re.IGNORECASE)
+            m_exp = re.search(r"\b(8|12|16|24|32)\s*(?:顆|個)?\s*lora\b", s_item, flags=re.IGNORECASE)
             if m_exp:
                 target_num_experts = int(m_exp.group(1))
                 break
         auto_base_topk = max(2, target_num_experts // 4)
 
+        _, parent_prefill = self.replicator.build_parent_code_and_scorecard_prefill(cube_meta)
+
         if self.server_url and self.model_id:
-            steer_str = "\n".join(f"- {s}" for s in steer_notes) if steer_notes else "自由發揮（可嘗試 Kuramoto 相位耦合、自由能最小化、朗之萬熱噪聲排斥場、或非線性疲勞阻尼等跳脫框架的數學公式）"
+            steer_str = "\n".join(f"- {s}" for s in steer_notes) if steer_notes else "結合 Shannon Entropy H(p) 動態調節 Top-K (K=2..6) 與非線性排斥勢場分散 16-LoRA 疲勞度，超越前一版綜合總分！"
             code_prompt = (
-                "你是 S-Tier 神經路由演化智能體。請撰寫一份完整的 Python 檔案 `evolved_router_plugin.py`。\n"
-                "【必須嚴格遵守的介面契約与維度規範 (AST & Shape Contract)】：\n"
+                "你是 S-Tier 神經路由演化智能體（奉行 70% 繁中拓撲 + 30% 英文 AST 錨點之雙語負熵煉金術）。\n"
+                "請先仔細閱讀下方【前一版母體 5 維度成績單】與【前一版已繼承之 `evolved_router_plugin.py` 原始碼】，"
+                "在此基礎上升級撰寫新一代 `evolved_router_plugin.py`（嚴禁退化已得分功能！）：\n\n"
+                f"{parent_prefill}\n\n"
+                "【必須嚴格遵守的介面契約與維度規範 (AST & Shape Contract)】：\n"
                 "1. 必須包含 `from generation_engine_trt_hybrid import FallbackFatigueRouter` 與 `import math`。\n"
                 "2. 必須定義 `class EvolvedCoreFatigueRouter(FallbackFatigueRouter):`，"
                 f"並在 `def __init__(self, num_experts={target_num_experts}, **kwargs): super().__init__(num_experts=num_experts, **kwargs)` 中支援 `{target_num_experts}` 顆專家！\n"
@@ -367,9 +375,11 @@ if __name__ == "__main__":
                 "而 `self.fatigue_scores` 的長度則是 `self.num_experts` (例如 16 顆)！\n"
                 "   - 因此若要讀取被選中專家的疲勞度，必須使用 `[self.fatigue_scores[exp_id] for exp_id in selected]` 或 `for idx, exp_id in enumerate(selected):`，"
                 "**嚴禁寫出 `for i in range(self.num_experts): ... weights[i]`，否則必觸發 `IndexError: list index out of range`！**\n"
+                "   - ⚠️【嚴禁負機率權重鐵律】：`weights` 是已經過 Softmax 的正機率值 ($0 \\sim 1$)，若要對 `fatigue > 0.7` 的專家施加 NREM 睡眠遮罩，"
+                "**必須乘上正數衰減（例如 `1e-4` 或 `math.exp(-2.5 * fatigue)`），絕對嚴禁將 `weights[i]` 乘上負數 `-1e9`（否則總和變負數會導致正負號反轉，`w=[1.0, -0.0, ...]` 崩潰）！**\n"
                 "   - 最後必須包含 `return weights, selected, entropy`！\n"
                 f"4. 【本代演化方向 / 主人 Steer 指令】：{steer_str}\n"
-                "請只輸出精簡的純 Python 程式碼（35行以內，少寫英文長註解，用 ```python ... ``` 包裹）。"
+                "請只輸出精簡的純 Python 程式碼（40行以內，少寫英文長註解，用 ```python ... ``` 包裹）。"
             )
             for attempt in range(1, 4):
                 try:
@@ -411,13 +421,18 @@ if __name__ == "__main__":
                         code_prompt += "\n[AST 自檢警告]：缺少 `EvolvedCoreFatigueRouter` 或 `forward_from_token_logprobs` 結尾漏掉 `return weights, selected, entropy`！"
                         continue
 
-                    # 2. Live 1-Step Runtime Smoke Test (Catches `list index out of range` BEFORE accepting!)
+                    # 2. Live 1-Step Runtime Smoke Test (Catches `list index out of range` AND negative weights `-1e9 * w`!)
                     smoke_ns: Dict[str, Any] = {}
                     sys.path.insert(0, self.workspace_root)
                     exec(compile(tree, filename="evolved_router_plugin.py", mode="exec"), smoke_ns)
                     test_inst = smoke_ns["EvolvedCoreFatigueRouter"](num_experts=target_num_experts, hidden_dim=5376, top_k=2, fatigue_threshold=1.6)
-                    w_t, s_t, e_t = test_inst.forward_from_token_logprobs(1, [1, 2], [-0.1, -0.5])
+                    # Test both virgin state and high-fatigue state (fatigue > 0.7) to catch negative weight bugs!
+                    test_inst.fatigue_scores[0] = 1.25
+                    test_inst.fatigue_scores[1] = 0.85
+                    w_t, s_t, e_t = test_inst.forward_from_token_logprobs(1, [0, 1, 2, 3], [-0.1, -0.3, -0.6, -1.2])
                     assert isinstance(w_t, list) and isinstance(s_t, list) and len(w_t) == len(s_t) and len(s_t) > 0
+                    assert all(float(x) >= 0.0 for x in w_t), f"Negative routing weight detected: {w_t}! Never multiply probability weights by -1e9; use 1e-4 or math.exp(-fatigue)!"
+                    assert abs(sum(w_t) - 1.0) < 0.05, f"Routing weights do not sum to 1.0: sum={sum(w_t)} ({w_t})"
 
                     llm_plugin_code = cand_code + "\n"
                     llm_author_mode = f"thor_llm_autonomous (attempt #{attempt}, experts={target_num_experts})"
@@ -483,6 +498,7 @@ class EvolvedCoreFatigueRouter(FallbackFatigueRouter):
         cube_meta: Dict[str, Any],
         l2_metrics: Dict[str, Any],
         steer_notes: List[str],
+        token_callback: Optional[Any] = None,
     ) -> Dict[str, Any]:
         """
         The Outer Cosmic Shell AI acts as Chief Examiner:
@@ -501,9 +517,9 @@ class EvolvedCoreFatigueRouter(FallbackFatigueRouter):
         # Load the offspring's evolved router plugin in-memory for the live prompt test!
         evolved_plugin = os.path.join(cube_dir, "evolved_router_plugin.py")
         offspring_router = None
-        target_num_experts = 8
+        target_num_experts = 16
         for s_item in steer_notes:
-            m_exp = re.search(r"\b(12|16|24|32)\s*(?:顆|個)?\s*lora\b", s_item, flags=re.IGNORECASE)
+            m_exp = re.search(r"\b(8|12|16|24|32)\s*(?:顆|個)?\s*lora\b", s_item, flags=re.IGNORECASE)
             if m_exp:
                 target_num_experts = int(m_exp.group(1))
                 break
@@ -590,6 +606,11 @@ class EvolvedCoreFatigueRouter(FallbackFatigueRouter):
 
                         w, sel, ent = offspring_router.forward_from_token_logprobs(tid, top_tids, top_vals)
                         slp = offspring_router.step_decay()
+                        if token_callback is not None:
+                            try:
+                                token_callback(piece, tid, float(ent), list(sel), list(w))
+                            except Exception:
+                                pass
                         if slp:
                             nrem_sleeps += len(slp)
                         entropies.append(float(ent))
@@ -763,9 +784,17 @@ class EvolvedCoreFatigueRouter(FallbackFatigueRouter):
             print(f"  ├─ ✅ [Stage 2] 演化假說與開發筆記已寫入 `{cube_meta['rel_path']}/DEV_NOTES.md`")
 
             # Stage 3 & 4: Synthesize Layer-1 & Spawn Layer-2 Matryoshka Grandchild Canary for Verification
-            self.replicator.run_evolution_step_3_synthesize_offspring_code(cube_meta)
+            self.replicator.run_evolution_step_3_synthesize_offspring_code(
+                cube_meta, server_url=self.server_url, model_id=self.model_id
+            )
             l2_rep = self.execute_matryoshka_two_layer_verification(cube_meta, steer_list)
-            ok_verify, _ = self.replicator.run_evolution_step_4_verify_gate(cube_meta)
+            ok_verify, verify_out = self.replicator.run_evolution_step_4_verify_gate(cube_meta)
+            if "HYPERCUBE_VERIFY_REPORT:" in verify_out:
+                try:
+                    rep_j = json.loads(verify_out.split("HYPERCUBE_VERIFY_REPORT:", 1)[1].splitlines()[0])
+                    l2_rep["orthogonality_error"] = float(rep_j.get("orthogonality_omega", 0.0))
+                except Exception:
+                    pass
 
             l2_alive = bool(l2_rep.get("l2_canary_alive", False))
             both_passed = ok_verify and l2_alive
@@ -792,6 +821,52 @@ class EvolvedCoreFatigueRouter(FallbackFatigueRouter):
             if both_passed and auto_swap:
                 _, swap_msg = self.replicator.rotate_hypercube_dimension(cube_id)
                 print(f"  ├─ 🌀 {swap_msg}")
+
+            # Record stage into SQLite WAL Blackbox & print Leaderboard
+            try:
+                from localsleep_telemetry_db import LocalSleepTelemetryVaultDB
+                vault = LocalSleepTelemetryVaultDB(
+                    session_dir=os.path.join(self.workspace_root, "sessions"),
+                    session_id=f"hypercube_{cube_id}",
+                    profile_id="hypercube_evo",
+                    model_id=self.model_id,
+                    server_url=self.server_url,
+                    active_cube_id=cube_id,
+                    sandbox_dir=cube_dir,
+                )
+                for fname in ("src/lib.rs", "evolved_router_plugin.py", "evolved_subagent_core.py", "evolved_homeostasis.py", "DEV_NOTES.md", "GOALS.json"):
+                    fpath = os.path.join(cube_dir, fname)
+                    if os.path.exists(fpath):
+                        vault.record_artifact_version(
+                            sandbox_rel_path=f"{cube_id}/{fname}",
+                            content_text=Path(fpath).read_text(encoding="utf-8", errors="replace"),
+                            cube_id=cube_id,
+                            turn_id=gen_step,
+                        )
+                gen_num_val = int(cube_meta.get("generation", 18 + gen_step))
+                stage_num_val = max(1, gen_num_val - 18)
+                st_spec = self.replicator.get_stage_spec(stage_num_val)
+                vault.record_hypercube_stage(
+                    cube_id=cube_id,
+                    parent_cube_id=str(cube_meta.get("parent_cube_id", "gen_000_origin")),
+                    stage_num=stage_num_val,
+                    stage_name=f"{st_spec['name']} ({cube_id})",
+                    steer_prompt="; ".join(steer_list) if steer_list else "",
+                    hypothesis_notes=str(llm_note)[:4000],
+                    compile_attempts=1,
+                    orthogonality_error=float(l2_rep.get("orthogonality_error", 0.0)),
+                    sparsity_pct=50.0,
+                    l2_canary_tps=float(l2_rep.get("evolved_tps", 0.0) or 0.0),
+                    tps_gain_ratio=float(l2_rep.get("tps_gain_ratio", 1.0) or 1.0),
+                    fatigue_reduction_pct=float(l2_rep.get("fatigue_reduction_pct", 0.0) or 0.0),
+                    dispersion_entropy_gain_pct=float(l2_rep.get("dispersion_entropy_gain_pct", 0.0) or 0.0),
+                    lora_fatigue_16=exam_rep.get("final_fatigue_scores") or [],
+                    verified_ok=bool(both_passed),
+                    summary_text=verify_out[:4000],
+                )
+                print("\n" + vault.format_leaderboard_report())
+            except Exception as e_v:
+                print(f"[Warning] Vault DB CLI logging error: {e_v}")
 
             # Check Emergence / Performance Breakthrough Alert Gate
             should_pause, alert_reasons = self.evaluate_emergence_and_novelty(llm_note, l2_rep, steer_list)

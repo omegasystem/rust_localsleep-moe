@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pando-Lite Parallel Worktree Dashboard</title>
+    <style>
+        :root { --bg:#0b0e17; --panel:#111625; --panel-alt:#0d1220; --input-bg:#090d16; --border:#26324d; --text:#e2e8f0; --muted:#8b9bb4; --cyan:#38bdf8; --green:#4ade80; --amber:#f59e0b; --red:#f87171; --purple:#c084fc; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background:var(--bg); color:var(--text); font-family:"JetBrains Mono","Fira Code","Noto Sans TC",monospace; height:100vh; display:flex; flex-direction:column; overflow:hidden; font-size:13px; }
+        
+        /* Tier 1: Header */
+        header { height:46px; background:var(--panel); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 16px; z-index:10; }
+        .brand { display:flex; align-items:center; gap:8px; font-weight:bold; font-size:15px; }
+        .badge { background:var(--border); padding:2px 6px; border-radius:4px; font-size:10px; color:var(--cyan); border:1px solid var(--cyan); }
+        .sys-status { display:flex; gap:12px; align-items:center; }
+        .status-dot { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); }
+
+        /* Tier 2: KPI Ribbon */
+        .kpi-ribbon { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:12px 14px; background:var(--bg); }
+        .kpi-box { background:var(--panel); border:1px solid var(--border); border-left:3px solid var(--cyan); padding:8px 14px; border-radius:5px; }
+        .kpi-box .k { color:var(--muted); font-size:11px; text-transform:uppercase; margin-bottom:4px; }
+        .kpi-box .v { font-size:18px; font-weight:bold; color:var(--text); }
+        .kpi-box .v span { font-size:12px; color:var(--muted); margin-left:4px; }
+
+        /* Tier 3: Workspace */
+        .workspace { display:grid; grid-template-columns: 1fr 400px; flex:1; min-height:0; }
+        .main-lane { display:flex; flex-direction:column; overflow:hidden; border-right:1px solid var(--border); }
+        .lane-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; padding:14px; overflow-y:auto; flex:1; }
+        
+        /* Card Anatomy */
+        .lane-card { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:12px; display:flex; flex-direction:column; gap:10px; }
+        .card-h { display:flex; justify-content:space-between; align-items:center; }
+        .card-h .name { font-weight:bold; display:flex; align-items:center; gap:6px; }
+        .card-h .lvl { font-size:10px; color:var(--muted); border:1px solid var(--border); padding:0 4px; border-radius:3px; }
+        .card-h .stat { font-size:10px; padding:2px 6px; border-radius:10px; font-weight:bold; }
+        .stat-clean { background:rgba(74,222,128,0.1); color:var(--green); border:1px solid var(--green); }
+        .stat-dirty { background:rgba(248,113,113,0.1); color:var(--red); border:1px solid var(--red); }
+        
+        .card-m { display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px; color:var(--muted); }
+        .card-m div { display:flex; justify-content:space-between; }
+        .card-m span { color:var(--text); }
+
+        .bar-container { display:flex; flex-direction:column; gap:4px; }
+        .bar-label { display:flex; justify-content:space-between; font-size:10px; color:var(--muted); }
+        .bar-bg { height:6px; background:var(--input-bg); border-radius:3px; overflow:hidden; position:relative; }
+        .bar-fill { height:100%; transition:width 0.3s ease; }
+
+        /* Terminal & Actions */
+        .term-box { height:180px; background:var(--input-bg); border-top:1px solid var(--border); padding:10px; font-family:monospace; overflow-y:auto; color:var(--green); font-size:12px; line-height:1.5; }
+        .action-bar { padding:10px 14px; background:var(--panel-alt); display:flex; gap:8px; border-top:1px solid var(--border); }
+        .btn { background:var(--panel); border:1px solid var(--border); color:var(--text); padding:6px 12px; border-radius:4px; cursor:pointer; font-size:11px; transition:0.2s; }
+        .btn:hover { border-color:var(--cyan); color:var(--cyan); }
+        .btn-primary { border-color:var(--purple); color:var(--purple); }
+        .btn-primary:hover { background:var(--purple); color:white; }
+
+        /* Right Panel */
+        .side-panel { background:var(--panel-alt); display:flex; flex-direction:column; padding:14px; gap:16px; }
+        .side-card { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:12px; }
+        .side-card h3 { font-size:12px; color:var(--muted); margin-bottom:10px; text-transform:uppercase; border-bottom:1px solid var(--border); padding-bottom:5px; }
+        .canvas-container { background:var(--input-bg); border:1px solid var(--border); border-radius:4px; padding:4px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">🐈‍⬛ Pando-Lite <span class="badge">v2.0.4-Tactical</span></div>
+        <div class="sys-status">
+            <span style="font-size:11px; color:var(--muted)">S-Tier Sync: Active</span>
+            <div class="status-dot"></div>
+        </div>
+    </header>
+
+    <div class="kpi-ribbon">
+        <div class="kpi-box"><div class="k">Active Lanes</div><div class="v">5 <span>/ 12 Max</span></div></div>
+        <div class="kpi-box" style="border-left-color:var(--purple)"><div class="k">Shared Cache</div><div class="v">1.24 <span>GB Saved</span></div></div>
+        <div class="kpi-box" style="border-left-color:var(--amber)"><div class="k">L0→L1 Compaction</div><div class="v">142 <span>Cycles</span></div></div>
+        <div class="kpi-box" style="border-left-color:var(--red)"><div class="k">L2 Privacy Shield</div><div class="v">ENABLED <span>🛡️</span></div></div>
+    </div>
+
+    <div class="workspace">
+        <div class="main-lane">
+            <div class="lane-grid" id="laneGrid">
+                <!-- Cards injected by JS -->
+            </div>
+            <div class="term-box" id="term">
+                [SYS] Initializing Pando-Lite Parallel Worktree...<br>
+                [SYS] Scanning L0 Root: /home/kuro/pando-core...<br>
+                [SYS] Found 5 active worktrees. Topology mapped.<br>
+                [READY] Awaiting tactical commands.
+            </div>
+            <div class="action-bar">
+                <button class="btn" onclick="log('Spawning new lane...')">⚡ Spawn Lane</button>
+                <button class="btn" onclick="log('Running L0 sanity tests...')">🧪 Run L0 Test</button>
+                <button class="btn" onclick="log('Squashing L0 to L1...')">📦 Squash Compact</button>
+                <button class="btn btn-primary" onclick="log('Pushing L1 to L2 Public...')">🌐 Project Public</button>
+            </div>
+        </div>
+
+        <div class="side-panel">
+            <div class="side-card">
+                <h3>Topology Metrics</h3>
+                <div class="card-m" style="gap:12px;">
+                    <div><span>L0 Depth:</span> <span>12 commits</span></div>
+                    <div><span>L1 Divergence:</span> <span>+4 / -1</span></div>
+                    <div><span>L2 Sync:</span> <span>98.2%</span></div>
+                    <div><span>IO Latency:</span> <span>1.2ms</span></div>
+                </div>
+            </div>
+            <div class="side-card">
+                <h3>Commit Density Heatmap</h3>
+                <div class="canvas-container">
+                    <canvas id="heatmap" width="360" height="160"></canvas>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:10px; color:var(--muted)">
+                    <span>L0 (Private)</span>
+                    <span>L1 (Staging)</span>
+                    <span>L2 (Public)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const lanes = [
+            { name: 'private_main', lvl: 'L0', status: 'CLEAN', sha: 'a1b2c3d', files: 0, ahead: 0, behind: 0, color: 'var(--cyan)' },
+            { name: 'lane_localsleep', lvl: 'L1', status: 'DIRTY', sha: 'f4e5d6c', files: 12, ahead: 8, behind: 2, color: 'var(--green)' },
+            { name: 'lane_dyson_phys', lvl: 'L1', status: 'CLEAN', sha: 'b9a8c7d', files: 0, ahead: 3, behind: 0, color: 'var(--purple)' },
+            { name: 'lane_ui_ab', lvl: 'L1', status: 'DIRTY', sha: 'e2f1a0b', files: 4, ahead: 12, behind: 5, color: 'var(--amber)' },
+            { name: 'public_main', lvl: 'L2', status: 'CLEAN', sha: 'd7c6b5a', files: 0, ahead: 0, behind: 0, color: 'var(--cyan)' },
+        ];
+
+        function renderLanes() {
+            const grid = document.getElementById('laneGrid');
+            grid.innerHTML = lanes.map(l => `
+                <div class="lane-card">
+                    <div class="card-h">
+                        <div class="name">${l.name} <span class="lvl">${l.lvl}</span></div>
+                        <div class="stat ${l.status === 'CLEAN' ? 'stat-clean' : 'stat-dirty'}">${l.status}</div>
+                    </div>
+                    <div class="card-m">
+                        <div>SHA: <span>${l.sha}</span></div>
+                        <div>Files: <span>${l.files}</span></div>
+                    </div>
+                    <div class="bar-container">
+                        <div class="bar-label"><span>Ahead/Behind</span><span>${l.ahead} / ${l.behind}</span></div>
+                        <div class="bar-bg">
+                            <div class="bar-fill" style="width:${Math.min(100, (l.ahead+l.behind)*5)}%; background:${l.color}"></div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function log(msg) {
+            const term = document.getElementById('term');
+            const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+            term.innerHTML += `<br>[${time}] ${msg}`;
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function initHeatmap() {
+            const canvas = document.getElementById('heatmap');
+            const ctx = canvas.getContext('2d');
+            const cols = 24, rows = 12;
+            const w = canvas.width / cols, h = canvas.height / rows;
+
+            for(let i=0; i<cols; i++) {
+                for(let j=0; j<rows; j++) {
+                    const val = Math.random();
+                    if(val > 0.8) ctx.fillStyle = `rgba(245,158,11,${val})`; // Amber
+                    else if(val > 0.4) ctx.fillStyle = `rgba(56,189,248,${val})`; // Cyan
+                    else ctx.fillStyle = '#090d16';
+                    ctx.fillRect(i*w, j*h, w-1, h-1);
+                }
+                if(i % 4 === 0) {
+                    ctx.strokeStyle = 'rgba(38,50,77,0.5)';
+                    ctx.beginPath(); ctx.moveTo(i*w, 0); ctx.lineTo(i*w, canvas.height); ctx.stroke();
+                }
+            }
+        }
+
+        window.onload = () => {
+            renderLanes();
+            initHeatmap();
+        };
+    </script>
+</body>
+</html>

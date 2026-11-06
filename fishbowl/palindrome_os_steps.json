@@ -1,0 +1,83 @@
+[
+  {
+    "round": 1,
+    "organ": "soma_gpui_desktop_r1",
+    "observation": {
+      "timestamp": "2026-11-06 13:20:26",
+      "organ_name": "soma_gpui_desktop_r1",
+      "binary_path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/organ_bay/soma_gpui_desktop_r1",
+      "binary_bytes": 4604288,
+      "status": "DAEMON_RUNNING",
+      "daemon_alive": true,
+      "daemon_pid": 2805443,
+      "anim_diff_pixels": 129017,
+      "return_code": 0,
+      "execution_ms": 753.91,
+      "fb_changed_pixels": 592485,
+      "fb_coverage_pct": 75.34,
+      "linux_loadavg": "2.02 1.95 1.94 3/1606 2805443",
+      "linux_meminfo_head": [
+        "MemTotal:       131742604 kB",
+        "MemFree:        49899608 kB",
+        "MemAvailable:   122585084 kB",
+        "Buffers:         2337952 kB"
+      ],
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "round": 2,
+    "organ": "soma_gpui_desktop_r2",
+    "observation": {
+      "timestamp": "2026-11-06 13:21:07",
+      "organ_name": "soma_gpui_desktop_r2",
+      "binary_path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/organ_bay/soma_gpui_desktop_r2",
+      "binary_bytes": 4606104,
+      "status": "DAEMON_RUNNING",
+      "daemon_alive": true,
+      "daemon_pid": 2805860,
+      "anim_diff_pixels": 108751,
+      "return_code": 0,
+      "execution_ms": 754.55,
+      "fb_changed_pixels": 587808,
+      "fb_coverage_pct": 74.74,
+      "linux_loadavg": "1.95 1.93 1.93 5/1606 2805860",
+      "linux_meminfo_head": [
+        "MemTotal:       131742604 kB",
+        "MemFree:        49957044 kB",
+        "MemAvailable:   122654340 kB",
+        "Buffers:         2338000 kB"
+      ],
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  {
+    "round": 3,
+    "organ": "soma_gpui_desktop_r3",
+    "observation": {
+      "timestamp": "2026-11-06 13:21:54",
+      "organ_name": "soma_gpui_desktop_r3",
+      "binary_path": "/home/omegacd/.openclaw/workspace/projects/rust_localsleep-moe/fishbowl/organ_bay/soma_gpui_desktop_r3",
+      "binary_bytes": 4605000,
+      "status": "DAEMON_RUNNING",
+      "daemon_alive": true,
+      "daemon_pid": 2806268,
+      "anim_diff_pixels": 96294,
+      "return_code": 0,
+      "execution_ms": 754.2,
+      "fb_changed_pixels": 608532,
+      "fb_coverage_pct": 77.38,
+      "linux_loadavg": "1.62 1.84 1.90 4/1607 2806268",
+      "linux_meminfo_head": [
+        "MemTotal:       131742604 kB",
+        "MemFree:        49980032 kB",
+        "MemAvailable:   122689440 kB",
+        "Buffers:         2338056 kB"
+      ],
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+]

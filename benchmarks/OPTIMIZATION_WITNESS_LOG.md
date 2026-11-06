@@ -534,3 +534,1191 @@
 🏁 [Hybrid Turn Complete] Tokens: 4176 | Elapsed: 176.68s (23.64 tps) | TTFT: 182.0ms | Top-2: [3, 5, 9, 8] (H=2.154)
 
 ```
+
+### 🔹 Run `2026-11-04 23:33:11` (`thor_31b_20261104_233057` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 751 | Elapsed: 43.65s (17.20 tps) | TTFT: 2456.4ms | Top-2: [7, 14, 1, 8, 13] (H=2.126)
+
+```
+
+### 🔹 Run `2026-11-04 23:37:18` (`thor_31b_20261104_233057` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2433 | Elapsed: 101.07s (24.07 tps) | TTFT: 466.9ms | Top-2: [14, 1, 0, 8] (H=2.120)
+
+```
+
+### 🔹 Run `2026-11-04 23:52:40` (`thor_31b_20261104_235052` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1699 | Elapsed: 75.68s (22.45 tps) | TTFT: 175.1ms | Top-2: [0, 14, 1, 8, 13] (H=2.116)
+
+```
+
+### 🔹 Run `2026-11-05 00:02:48` (`thor_31b_20261104_235052` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3375 | Elapsed: 136.10s (24.80 tps) | TTFT: 1158.7ms | Top-2: [7, 1, 10, 8, 13] (H=2.140)
+
+```
+
+### 🔹 Run `2026-11-05 00:11:45` (`thor_31b_20261104_235052` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3488 | Elapsed: 143.97s (24.23 tps) | TTFT: 2597.8ms | Top-2: [7, 0, 14, 8, 15] (H=2.143)
+
+```
+
+### 🔹 Run `2026-11-05 09:40:28` (`thor_31b_20261105_093715` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 4523 | Elapsed: 184.73s (24.48 tps) | TTFT: 4174.9ms | Top-2: [7, 14, 10, 3] (H=2.140)
+
+```
+
+### 🔹 Run `2026-11-05 11:22:12` (`thor_31b_20261105_112019` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2775 | Elapsed: 109.95s (25.24 tps) | TTFT: 679.4ms | Top-2: [14, 1, 10, 13] (H=2.135)
+
+```
+
+### 🔹 Run `2026-11-05 11:40:38` (`thor_31b_20261105_113945` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 863 | Elapsed: 45.21s (19.09 tps) | TTFT: 708.0ms | Top-2: [14, 10, 8, 3] (H=2.158)
+
+```
+
+### 🔹 Run `2026-11-05 11:41:54` (`thor_31b_20261105_113945` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 401 | Elapsed: 21.79s (18.41 tps) | TTFT: 526.9ms | Top-2: [8, 0, 11, 3, 5] (H=2.102)
+
+```
+
+### 🔹 Run `2026-11-05 11:42:58` (`thor_31b_20261105_114212` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 809 | Elapsed: 43.02s (18.81 tps) | TTFT: 696.4ms | Top-2: [7, 0, 14, 10] (H=2.156)
+
+```
+
+### 🔹 Run `2026-11-05 11:45:39` (`thor_31b_20261105_114212` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3128 | Elapsed: 127.57s (24.52 tps) | TTFT: 778.9ms | Top-2: [0, 14, 1, 10] (H=2.137)
+
+```
+
+### 🔹 Run `2026-11-05 13:44:42` (`thor_31b_20261105_134353` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 815 | Elapsed: 43.58s (18.70 tps) | TTFT: 699.6ms | Top-2: [7, 0, 1, 10] (H=2.152)
+
+```
+
+### 🔹 Run `2026-11-05 13:52:32` (`thor_31b_20261105_134353` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3591 | Elapsed: 141.48s (25.38 tps) | TTFT: 785.4ms | Top-2: [7, 14, 1, 10, 13] (H=2.129)
+
+```
+
+### 🔹 Run `2026-11-05 18:27:50` (`thor_31b_20261105_182109` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2560 | Elapsed: 88.51s (28.92 tps) | TTFT: 313.0ms | Top-2: [7, 1, 8, 13] (H=2.124)
+
+```
+
+### 🔹 Run `2026-11-05 20:26:36` (`thor_31b_20261105_182109` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 4096 | Elapsed: 132.41s (30.93 tps) | TTFT: 195.7ms | Top-2: [4, 13, 14, 3, 6] (H=2.158)
+
+```
+
+### 🔹 Run `2026-11-05 20:28:48` (`thor_31b_20261105_182109` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 4096 | Elapsed: 130.65s (31.35 tps) | TTFT: 822.9ms | Top-2: [8, 12, 2, 13] (H=2.120)
+
+```
+
+### 🔹 Run `2026-11-05 20:39:01` (`thor_31b_20261105_182109` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3531 | Elapsed: 122.97s (28.71 tps) | TTFT: 792.4ms | Top-2: [7, 1, 10, 8, 13] (H=2.121)
+
+```
+
+### 🔹 Run `2026-11-05 20:45:14` (`thor_31b_20261105_182109` | `web-ui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2142 | Elapsed: 80.97s (26.45 tps) | TTFT: 7997.1ms | Top-2: [7, 0, 10] (H=2.160)
+
+```
+
+### 🔹 Run `2026-11-05 20:50:10` (`thor_31b_20261105_182109` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2059 | Elapsed: 63.81s (32.27 tps) | TTFT: 5826.3ms | Top-2: [7, 14, 1, 8] (H=2.186)
+
+```
+
+### 🔹 Run `2026-11-05 20:55:50` (`thor_31b_20261105_182109` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2494 | Elapsed: 87.98s (28.35 tps) | TTFT: 1492.5ms | Top-2: [7, 1, 4, 15] (H=2.163)
+
+```
+
+### 🔹 Run `2026-11-05 20:58:34` (`thor_31b_20261105_182109` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2513 | Elapsed: 73.78s (34.06 tps) | TTFT: 1846.1ms | Top-2: [7, 0, 14, 13] (H=2.187)
+
+```
+
+### 🔹 Run `2026-11-05 21:02:43` (`thor_31b_20261105_182109` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 535 | Elapsed: 38.68s (13.83 tps) | TTFT: 7247.3ms | Top-2: [0, 14, 1, 3] (H=2.150)
+
+```
+
+### 🔹 Run `2026-11-05 21:06:26` (`thor_31b_20261105_182109` | `pyqt6-gui-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2568 | Elapsed: 107.87s (23.81 tps) | TTFT: 647.6ms | Top-2: [0, 14, 13, 4] (H=2.120)
+
+```
+
+### 🔹 Run `2026-11-05 21:20:29` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1426 | Elapsed: 51.59s (27.64 tps) | TTFT: 256.9ms | Top-2: [11, 9, 13, 14] (H=2.124)
+
+```
+
+### 🔹 Run `2026-11-05 21:21:39` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2064 | Elapsed: 68.88s (29.97 tps) | TTFT: 1018.5ms | Top-2: [7, 0, 14, 1, 10] (H=2.121)
+
+```
+
+### 🔹 Run `2026-11-05 21:40:27` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1327 | Elapsed: 79.43s (16.71 tps) | TTFT: 338.1ms | Top-2: [7, 0, 1, 14, 8] (H=2.155)
+
+```
+
+### 🔹 Run `2026-11-05 21:43:22` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2254 | Elapsed: 174.28s (12.93 tps) | TTFT: 395.9ms | Top-2: [0, 14, 1, 8] (H=2.167)
+
+```
+
+### 🔹 Run `2026-11-05 21:45:56` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2059 | Elapsed: 152.31s (13.52 tps) | TTFT: 265.0ms | Top-2: [14, 1, 8, 13] (H=2.175)
+
+```
+
+### 🔹 Run `2026-11-05 21:48:48` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2222 | Elapsed: 171.02s (12.99 tps) | TTFT: 252.8ms | Top-2: [1, 0, 3, 13] (H=2.159)
+
+```
+
+### 🔹 Run `2026-11-05 21:50:57` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1715 | Elapsed: 127.99s (13.40 tps) | TTFT: 274.9ms | Top-2: [14, 0, 8, 10] (H=2.161)
+
+```
+
+### 🔹 Run `2026-11-05 21:53:36` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2090 | Elapsed: 157.07s (13.31 tps) | TTFT: 247.0ms | Top-2: [1, 10, 8, 13, 3] (H=2.168)
+
+```
+
+### 🔹 Run `2026-11-05 21:56:14` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2101 | Elapsed: 156.29s (13.44 tps) | TTFT: 250.6ms | Top-2: [0, 1, 10, 8] (H=2.162)
+
+```
+
+### 🔹 Run `2026-11-05 21:58:35` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1893 | Elapsed: 139.96s (13.53 tps) | TTFT: 246.2ms | Top-2: [8, 3, 4, 6] (H=2.169)
+
+```
+
+### 🔹 Run `2026-11-05 22:01:11` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2095 | Elapsed: 155.26s (13.49 tps) | TTFT: 246.3ms | Top-2: [14, 7, 0, 1, 8] (H=2.155)
+
+```
+
+### 🔹 Run `2026-11-05 22:03:33` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1852 | Elapsed: 140.71s (13.16 tps) | TTFT: 248.1ms | Top-2: [4, 7, 13, 12, 15] (H=2.168)
+
+```
+
+### 🔹 Run `2026-11-05 22:06:15` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2195 | Elapsed: 160.55s (13.67 tps) | TTFT: 253.1ms | Top-2: [7, 0, 14, 13] (H=2.159)
+
+```
+
+### 🔹 Run `2026-11-05 23:10:10` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2353 | Elapsed: 143.66s (16.38 tps) | TTFT: 415.2ms | Top-2: [0, 14, 1, 10, 8] (H=2.155)
+
+```
+
+### 🔹 Run `2026-11-05 23:12:46` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1924 | Elapsed: 155.10s (12.40 tps) | TTFT: 359.8ms | Top-2: [13, 4, 15, 6, 12] (H=2.163)
+
+```
+
+### 🔹 Run `2026-11-05 23:16:01` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2412 | Elapsed: 193.61s (12.46 tps) | TTFT: 937.9ms | Top-2: [7, 0, 1, 10] (H=2.171)
+
+```
+
+### 🔹 Run `2026-11-05 23:19:03` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2260 | Elapsed: 180.43s (12.53 tps) | TTFT: 1200.3ms | Top-2: [1, 13, 15, 4] (H=2.176)
+
+```
+
+### 🔹 Run `2026-11-05 23:21:51` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2169 | Elapsed: 165.99s (13.07 tps) | TTFT: 207.8ms | Top-2: [7, 0, 1, 10] (H=2.196)
+
+```
+
+### 🔹 Run `2026-11-05 23:24:59` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2399 | Elapsed: 186.99s (12.83 tps) | TTFT: 967.9ms | Top-2: [0, 14, 1, 10] (H=2.155)
+
+```
+
+### 🔹 Run `2026-11-05 23:28:31` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2798 | Elapsed: 210.45s (13.30 tps) | TTFT: 976.8ms | Top-2: [0, 14, 1, 8, 13] (H=2.154)
+
+```
+
+### 🔹 Run `2026-11-05 23:31:30` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2373 | Elapsed: 178.03s (13.33 tps) | TTFT: 1100.2ms | Top-2: [7, 1, 10, 8] (H=2.181)
+
+```
+
+### 🔹 Run `2026-11-05 23:34:14` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2149 | Elapsed: 162.51s (13.22 tps) | TTFT: 211.8ms | Top-2: [7, 0, 14, 3] (H=2.193)
+
+```
+
+### 🔹 Run `2026-11-05 23:37:07` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2127 | Elapsed: 171.42s (12.41 tps) | TTFT: 1057.0ms | Top-2: [7, 0, 14, 8, 13] (H=2.161)
+
+```
+
+### 🔹 Run `2026-11-05 23:39:41` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2026 | Elapsed: 152.94s (13.25 tps) | TTFT: 961.0ms | Top-2: [7, 0, 14, 1] (H=2.159)
+
+```
+
+### 🔹 Run `2026-11-05 23:45:23` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2471 | Elapsed: 189.98s (13.01 tps) | TTFT: 182.9ms | Top-2: [7, 0, 14, 8] (H=2.150)
+
+```
+
+### 🔹 Run `2026-11-05 23:48:01` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2078 | Elapsed: 156.99s (13.24 tps) | TTFT: 1000.6ms | Top-2: [0, 14, 10, 3] (H=2.163)
+
+```
+
+### 🔹 Run `2026-11-05 23:51:04` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2353 | Elapsed: 181.71s (12.95 tps) | TTFT: 192.2ms | Top-2: [0, 13, 3, 4] (H=2.180)
+
+```
+
+### 🔹 Run `2026-11-05 23:53:34` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1901 | Elapsed: 147.92s (12.85 tps) | TTFT: 915.0ms | Top-2: [7, 0, 1, 13] (H=2.170)
+
+```
+
+### 🔹 Run `2026-11-05 23:56:28` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2349 | Elapsed: 173.35s (13.55 tps) | TTFT: 907.3ms | Top-2: [14, 1, 7, 0] (H=2.156)
+
+```
+
+### 🔹 Run `2026-11-05 23:59:05` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2046 | Elapsed: 155.81s (13.13 tps) | TTFT: 1072.0ms | Top-2: [7, 0, 14, 10, 8] (H=2.174)
+
+```
+
+### 🔹 Run `2026-11-06 00:02:20` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2456 | Elapsed: 193.76s (12.68 tps) | TTFT: 208.5ms | Top-2: [13, 4, 7, 15, 6] (H=2.185)
+
+```
+
+### 🔹 Run `2026-11-06 00:04:46` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1875 | Elapsed: 144.14s (13.01 tps) | TTFT: 899.6ms | Top-2: [0, 10, 13, 15, 3] (H=2.167)
+
+```
+
+### 🔹 Run `2026-11-06 00:08:06` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2603 | Elapsed: 197.98s (13.15 tps) | TTFT: 824.5ms | Top-2: [7, 0, 10, 13] (H=2.162)
+
+```
+
+### 🔹 Run `2026-11-06 00:10:46` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2209 | Elapsed: 159.17s (13.88 tps) | TTFT: 1034.0ms | Top-2: [14, 10, 8, 3] (H=2.168)
+
+```
+
+### 🔹 Run `2026-11-06 00:13:39` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2329 | Elapsed: 172.02s (13.54 tps) | TTFT: 196.4ms | Top-2: [7, 14, 0, 8, 13] (H=2.176)
+
+```
+
+### 🔹 Run `2026-11-06 00:16:40` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2326 | Elapsed: 179.12s (12.99 tps) | TTFT: 943.9ms | Top-2: [0, 14, 10, 8] (H=2.154)
+
+```
+
+### 🔹 Run `2026-11-06 00:19:48` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2487 | Elapsed: 187.41s (13.27 tps) | TTFT: 981.1ms | Top-2: [13, 4, 7, 15, 6] (H=2.164)
+
+```
+
+### 🔹 Run `2026-11-06 00:22:38` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2141 | Elapsed: 168.20s (12.73 tps) | TTFT: 990.9ms | Top-2: [7, 0, 14, 1, 10] (H=2.165)
+
+```
+
+### 🔹 Run `2026-11-06 00:25:22` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2070 | Elapsed: 163.29s (12.68 tps) | TTFT: 197.2ms | Top-2: [7, 0, 1, 10, 8] (H=2.190)
+
+```
+
+### 🔹 Run `2026-11-06 00:28:10` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2163 | Elapsed: 166.68s (12.98 tps) | TTFT: 911.3ms | Top-2: [7, 0, 14, 1, 10] (H=2.168)
+
+```
+
+### 🔹 Run `2026-11-06 00:31:02` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2197 | Elapsed: 170.32s (12.90 tps) | TTFT: 1069.9ms | Top-2: [7, 14, 1, 8] (H=2.177)
+
+```
+
+### 🔹 Run `2026-11-06 00:44:14` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2171 | Elapsed: 166.55s (13.04 tps) | TTFT: 187.8ms | Top-2: [7, 0, 14, 8] (H=2.171)
+
+```
+
+### 🔹 Run `2026-11-06 00:47:12` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2370 | Elapsed: 177.41s (13.36 tps) | TTFT: 1014.7ms | Top-2: [7, 0, 1, 8, 13] (H=2.175)
+
+```
+
+### 🔹 Run `2026-11-06 00:49:54` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2037 | Elapsed: 160.02s (12.73 tps) | TTFT: 190.7ms | Top-2: [7, 0, 14, 10] (H=2.187)
+
+```
+
+### 🔹 Run `2026-11-06 01:15:21` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2187 | Elapsed: 143.94s (15.19 tps) | TTFT: 400.8ms | Top-2: [1, 8, 13, 3] (H=2.151)
+
+```
+
+### 🔹 Run `2026-11-06 01:17:53` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1947 | Elapsed: 151.06s (12.89 tps) | TTFT: 388.4ms | Top-2: [7, 0, 14, 8, 13] (H=2.163)
+
+```
+
+### 🔹 Run `2026-11-06 01:20:09` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1666 | Elapsed: 134.15s (12.42 tps) | TTFT: 1056.5ms | Top-2: [0, 14, 13, 3] (H=2.156)
+
+```
+
+### 🔹 Run `2026-11-06 01:22:44` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2106 | Elapsed: 154.24s (13.65 tps) | TTFT: 949.1ms | Top-2: [14, 1, 7, 0] (H=2.157)
+
+```
+
+### 🔹 Run `2026-11-06 01:23:19` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 439 | Elapsed: 34.14s (12.86 tps) | TTFT: 195.6ms | Top-2: [7, 0, 14, 1, 10] (H=2.168)
+
+```
+
+### 🔹 Run `2026-11-06 01:30:27` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1506 | Elapsed: 118.73s (12.68 tps) | TTFT: 1055.8ms | Top-2: [13, 7, 12, 5] (H=2.167)
+
+```
+
+### 🔹 Run `2026-11-06 01:33:14` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2284 | Elapsed: 166.05s (13.75 tps) | TTFT: 735.4ms | Top-2: [7, 14, 1, 0] (H=2.168)
+
+```
+
+### 🔹 Run `2026-11-06 01:35:21` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1775 | Elapsed: 126.28s (14.06 tps) | TTFT: 1070.2ms | Top-2: [7, 0, 14, 10, 13] (H=2.178)
+
+```
+
+### 🔹 Run `2026-11-06 01:35:58` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 456 | Elapsed: 35.35s (12.90 tps) | TTFT: 175.7ms | Top-2: [0, 6, 12, 1, 11, 7] (H=2.148)
+
+```
+
+### 🔹 Run `2026-11-06 01:38:30` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1966 | Elapsed: 150.72s (13.04 tps) | TTFT: 889.8ms | Top-2: [8, 10, 9, 6] (H=2.165)
+
+```
+
+### 🔹 Run `2026-11-06 01:40:35` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1547 | Elapsed: 124.26s (12.45 tps) | TTFT: 1041.1ms | Top-2: [1, 0, 3] (H=2.160)
+
+```
+
+### 🔹 Run `2026-11-06 01:42:51` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1807 | Elapsed: 134.60s (13.43 tps) | TTFT: 767.1ms | Top-2: [7, 14, 10, 13, 3] (H=2.161)
+
+```
+
+### 🔹 Run `2026-11-06 01:43:30` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 446 | Elapsed: 37.15s (12.01 tps) | TTFT: 182.3ms | Top-2: [7, 14, 1, 8, 13] (H=2.187)
+
+```
+
+### 🔹 Run `2026-11-06 01:45:39` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1638 | Elapsed: 128.58s (12.74 tps) | TTFT: 958.8ms | Top-2: [7, 0, 14, 13] (H=2.163)
+
+```
+
+### 🔹 Run `2026-11-06 01:48:20` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2041 | Elapsed: 159.44s (12.80 tps) | TTFT: 1025.9ms | Top-2: [7, 0, 14, 1] (H=2.165)
+
+```
+
+### 🔹 Run `2026-11-06 01:50:04` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1392 | Elapsed: 103.12s (13.50 tps) | TTFT: 997.1ms | Top-2: [0, 1, 10, 8] (H=2.165)
+
+```
+
+### 🔹 Run `2026-11-06 01:50:43` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 468 | Elapsed: 36.95s (12.67 tps) | TTFT: 180.8ms | Top-2: [3, 2, 10, 11, 12, 8] (H=2.172)
+
+```
+
+### 🔹 Run `2026-11-06 01:52:47` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1592 | Elapsed: 122.90s (12.95 tps) | TTFT: 681.9ms | Top-2: [0, 14, 1, 10, 8] (H=2.162)
+
+```
+
+### 🔹 Run `2026-11-06 01:55:04` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1770 | Elapsed: 136.24s (12.99 tps) | TTFT: 824.2ms | Top-2: [14, 7, 1, 0, 8] (H=2.162)
+
+```
+
+### 🔹 Run `2026-11-06 01:57:20` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1855 | Elapsed: 134.43s (13.80 tps) | TTFT: 870.8ms | Top-2: [13, 4, 7, 15, 6] (H=2.167)
+
+```
+
+### 🔹 Run `2026-11-06 01:58:02` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 531 | Elapsed: 40.80s (13.01 tps) | TTFT: 174.8ms | Top-2: [7, 14, 0, 1, 8] (H=2.166)
+
+```
+
+### 🔹 Run `2026-11-06 02:00:07` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1587 | Elapsed: 124.11s (12.79 tps) | TTFT: 876.3ms | Top-2: [14, 1, 8, 13] (H=2.169)
+
+```
+
+### 🔹 Run `2026-11-06 02:02:37` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1956 | Elapsed: 149.21s (13.11 tps) | TTFT: 735.2ms | Top-2: [0, 1, 8] (H=2.161)
+
+```
+
+### 🔹 Run `2026-11-06 02:04:50` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1779 | Elapsed: 131.75s (13.50 tps) | TTFT: 948.3ms | Top-2: [14, 10, 8, 13, 3] (H=2.158)
+
+```
+
+### 🔹 Run `2026-11-06 02:05:28` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 493 | Elapsed: 37.64s (13.10 tps) | TTFT: 174.1ms | Top-2: [7, 0, 8, 3] (H=2.197)
+
+```
+
+### 🔹 Run `2026-11-06 02:07:42` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1642 | Elapsed: 132.05s (12.43 tps) | TTFT: 890.0ms | Top-2: [13, 4, 15, 6, 12] (H=2.158)
+
+```
+
+### 🔹 Run `2026-11-06 02:10:33` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2164 | Elapsed: 169.62s (12.76 tps) | TTFT: 871.4ms | Top-2: [7, 1, 8, 3] (H=2.175)
+
+```
+
+### 🔹 Run `2026-11-06 02:13:08` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2027 | Elapsed: 154.47s (13.12 tps) | TTFT: 1035.9ms | Top-2: [7, 10, 13, 3] (H=2.158)
+
+```
+
+### 🔹 Run `2026-11-06 02:13:45` (`thor_31b_20261105_211233` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 436 | Elapsed: 35.64s (12.23 tps) | TTFT: 197.4ms | Top-2: [7, 1, 10, 8] (H=2.171)
+
+```
+
+### 🔹 Run `2026-11-06 10:00:21` (`thor_31b_20261106_095246` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2007 | Elapsed: 68.50s (29.30 tps) | TTFT: 263.5ms | Top-2: [7, 0, 14, 1] (H=2.135)
+
+```
+
+### 🔹 Run `2026-11-06 10:22:34` (`thor_31b_20261106_095246` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 267 | Elapsed: 14.06s (18.99 tps) | TTFT: 335.3ms | Top-2: [14, 8, 10, 6] (H=2.139)
+
+```
+
+### 🔹 Run `2026-11-06 10:23:44` (`thor_31b_20261106_095246` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1988 | Elapsed: 68.75s (28.92 tps) | TTFT: 436.0ms | Top-2: [11, 2, 0, 13, 7] (H=2.147)
+
+```
+
+### 🔹 Run `2026-11-06 10:24:03` (`thor_31b_20261106_095246` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 366 | Elapsed: 18.03s (20.29 tps) | TTFT: 338.9ms | Top-2: [1, 14, 8, 9, 10] (H=2.152)
+
+```
+
+### 🔹 Run `2026-11-06 10:25:22` (`thor_31b_20261106_095246` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2181 | Elapsed: 77.07s (28.30 tps) | TTFT: 456.9ms | Top-2: [0, 14, 1, 10] (H=2.156)
+
+```
+
+### 🔹 Run `2026-11-06 10:25:42` (`thor_31b_20261106_095246` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 392 | Elapsed: 17.88s (21.92 tps) | TTFT: 507.3ms | Top-2: [7, 0, 14, 8] (H=2.150)
+
+```
+
+### 🔹 Run `2026-11-06 10:27:09` (`thor_31b_20261106_095246` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2556 | Elapsed: 86.69s (29.49 tps) | TTFT: 472.3ms | Top-2: [11, 2, 9, 0, 14] (H=2.143)
+
+```
+
+### 🔹 Run `2026-11-06 10:49:31` (`thor_31b_20261106_104633` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2935 | Elapsed: 98.12s (29.91 tps) | TTFT: 632.6ms | Top-2: [7, 0, 14, 10] (H=2.145)
+
+```
+
+### 🔹 Run `2026-11-06 10:51:04` (`thor_31b_20261106_104633` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2797 | Elapsed: 92.10s (30.37 tps) | TTFT: 735.4ms | Top-2: [7, 0, 1, 10, 8] (H=2.152)
+
+```
+
+### 🔹 Run `2026-11-06 10:52:45` (`thor_31b_20261106_104633` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2990 | Elapsed: 99.68s (29.99 tps) | TTFT: 731.5ms | Top-2: [7, 10, 13, 3] (H=2.145)
+
+```
+
+### 🔹 Run `2026-11-06 10:54:29` (`thor_31b_20261106_104633` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3144 | Elapsed: 102.76s (30.60 tps) | TTFT: 688.4ms | Top-2: [7, 0, 14, 1, 10] (H=2.145)
+
+```
+
+### 🔹 Run `2026-11-06 10:56:10` (`thor_31b_20261106_104633` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3001 | Elapsed: 100.32s (29.91 tps) | TTFT: 717.1ms | Top-2: [7, 0, 10, 8] (H=2.150)
+
+```
+
+### 🔹 Run `2026-11-06 10:58:28` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2935 | Elapsed: 99.23s (29.58 tps) | TTFT: 625.2ms | Top-2: [7, 0, 14, 10] (H=2.145)
+
+```
+
+### 🔹 Run `2026-11-06 11:00:08` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2952 | Elapsed: 98.27s (30.04 tps) | TTFT: 725.3ms | Top-2: [7, 0, 10, 8] (H=2.151)
+
+```
+
+### 🔹 Run `2026-11-06 11:01:49` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2985 | Elapsed: 99.57s (29.98 tps) | TTFT: 716.9ms | Top-2: [10, 8, 15, 6] (H=2.151)
+
+```
+
+### 🔹 Run `2026-11-06 11:03:28` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2944 | Elapsed: 97.87s (30.08 tps) | TTFT: 710.8ms | Top-2: [10, 8, 13, 15] (H=2.147)
+
+```
+
+### 🔹 Run `2026-11-06 11:05:09` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3044 | Elapsed: 99.24s (30.67 tps) | TTFT: 716.3ms | Top-2: [0, 10, 8, 13, 3] (H=2.152)
+
+```
+
+### 🔹 Run `2026-11-06 11:07:45` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2799 | Elapsed: 93.44s (29.95 tps) | TTFT: 671.1ms | Top-2: [7, 0, 14, 1, 10] (H=2.149)
+
+```
+
+### 🔹 Run `2026-11-06 11:08:59` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2672 | Elapsed: 73.02s (36.59 tps) | TTFT: 1863.3ms | Top-2: [11, 2, 9, 0, 13] (H=2.170)
+
+```
+
+### 🔹 Run `2026-11-06 11:09:28` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 439 | Elapsed: 25.61s (17.14 tps) | TTFT: 714.2ms | Top-2: [0, 8, 15, 13] (H=2.166)
+
+```
+
+### 🔹 Run `2026-11-06 11:11:54` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2799 | Elapsed: 93.34s (29.99 tps) | TTFT: 661.8ms | Top-2: [7, 0, 1, 10, 13] (H=2.142)
+
+```
+
+### 🔹 Run `2026-11-06 11:13:09` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2668 | Elapsed: 73.94s (36.08 tps) | TTFT: 1878.0ms | Top-2: [11, 2, 9, 0, 13, 14] (H=2.171)
+
+```
+
+### 🔹 Run `2026-11-06 11:13:43` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 471 | Elapsed: 29.60s (15.91 tps) | TTFT: 707.8ms | Top-2: [7, 0, 14, 10, 3] (H=2.153)
+
+```
+
+### 🔹 Run `2026-11-06 11:17:38` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2791 | Elapsed: 92.94s (30.03 tps) | TTFT: 652.2ms | Top-2: [7, 0, 1, 10, 8] (H=2.149)
+
+```
+
+### 🔹 Run `2026-11-06 11:18:53` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2664 | Elapsed: 73.56s (36.22 tps) | TTFT: 1846.5ms | Top-2: [11, 2, 9, 13, 14] (H=2.166)
+
+```
+
+### 🔹 Run `2026-11-06 11:19:24` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 441 | Elapsed: 26.14s (16.87 tps) | TTFT: 704.8ms | Top-2: [7, 0, 1, 14, 8] (H=2.156)
+
+```
+
+### 🔹 Run `2026-11-06 11:21:10` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3162 | Elapsed: 105.30s (30.03 tps) | TTFT: 885.8ms | Top-2: [0, 14, 1, 10, 8] (H=2.145)
+
+```
+
+### 🔹 Run `2026-11-06 11:21:43` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 464 | Elapsed: 28.70s (16.17 tps) | TTFT: 698.8ms | Top-2: [14, 13, 9] (H=2.160)
+
+```
+
+### 🔹 Run `2026-11-06 11:23:27` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3073 | Elapsed: 102.85s (29.88 tps) | TTFT: 902.5ms | Top-2: [7, 0, 1, 10] (H=2.145)
+
+```
+
+### 🔹 Run `2026-11-06 11:23:56` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 396 | Elapsed: 24.64s (16.07 tps) | TTFT: 701.6ms | Top-2: [0, 1, 10, 13] (H=2.159)
+
+```
+
+### 🔹 Run `2026-11-06 11:25:50` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3361 | Elapsed: 112.45s (29.89 tps) | TTFT: 869.3ms | Top-2: [0, 1, 10, 8] (H=2.145)
+
+```
+
+### 🔹 Run `2026-11-06 11:26:21` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 446 | Elapsed: 26.81s (16.64 tps) | TTFT: 609.6ms | Top-2: [1, 14, 15, 9] (H=2.184)
+
+```
+
+### 🔹 Run `2026-11-06 11:28:10` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 3154 | Elapsed: 108.49s (29.07 tps) | TTFT: 908.2ms | Top-2: [7, 0, 1, 10, 8] (H=2.138)
+
+```
+
+### 🔹 Run `2026-11-06 11:28:38` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 360 | Elapsed: 23.96s (15.02 tps) | TTFT: 685.0ms | Top-2: [7, 0, 1, 14, 15] (H=2.148)
+
+```
+
+### 🔹 Run `2026-11-06 11:55:59` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1174 | Elapsed: 42.72s (27.48 tps) | TTFT: 1017.2ms | Top-2: [0, 1, 14, 15, 9] (H=2.120)
+
+```
+
+### 🔹 Run `2026-11-06 11:56:46` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1122 | Elapsed: 45.32s (24.76 tps) | TTFT: 1008.5ms | Top-2: [7, 0, 14, 9, 13] (H=2.115)
+
+```
+
+### 🔹 Run `2026-11-06 11:57:29` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1071 | Elapsed: 40.62s (26.37 tps) | TTFT: 1041.9ms | Top-2: [7, 1, 8, 15, 10] (H=2.127)
+
+```
+
+### 🔹 Run `2026-11-06 11:58:12` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1128 | Elapsed: 42.10s (26.79 tps) | TTFT: 1026.2ms | Top-2: [7, 0, 15, 9] (H=2.121)
+
+```
+
+### 🔹 Run `2026-11-06 11:59:00` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1236 | Elapsed: 46.43s (26.62 tps) | TTFT: 1020.3ms | Top-2: [7, 0, 1, 8, 15] (H=2.128)
+
+```
+
+### 🔹 Run `2026-11-06 12:00:48` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1108 | Elapsed: 39.32s (28.18 tps) | TTFT: 1033.6ms | Top-2: [7, 14, 8, 15, 9] (H=2.122)
+
+```
+
+### 🔹 Run `2026-11-06 12:01:40` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1354 | Elapsed: 50.18s (26.98 tps) | TTFT: 1061.7ms | Top-2: [13, 11, 15, 9] (H=2.137)
+
+```
+
+### 🔹 Run `2026-11-06 12:03:10` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2489 | Elapsed: 89.44s (27.83 tps) | TTFT: 1082.5ms | Top-2: [7, 1, 10, 13, 3] (H=2.127)
+
+```
+
+### 🔹 Run `2026-11-06 12:04:32` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 2248 | Elapsed: 79.87s (28.15 tps) | TTFT: 1056.7ms | Top-2: [7, 0, 14, 1, 10] (H=2.124)
+
+```
+
+### 🔹 Run `2026-11-06 12:05:26` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1295 | Elapsed: 53.08s (24.40 tps) | TTFT: 1054.2ms | Top-2: [7, 0, 14, 1, 10] (H=2.121)
+
+```
+
+### 🔹 Run `2026-11-06 12:06:13` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1162 | Elapsed: 44.47s (26.13 tps) | TTFT: 1076.0ms | Top-2: [0, 1, 14, 8, 15] (H=2.114)
+
+```
+
+### 🔹 Run `2026-11-06 12:07:04` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1256 | Elapsed: 49.19s (25.53 tps) | TTFT: 1213.3ms | Top-2: [7, 10, 8, 13] (H=2.130)
+
+```
+
+### 🔹 Run `2026-11-06 12:07:41` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 970 | Elapsed: 36.17s (26.82 tps) | TTFT: 1226.9ms | Top-2: [0, 14, 8, 15, 13] (H=2.129)
+
+```
+
+### 🔹 Run `2026-11-06 12:08:24` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1104 | Elapsed: 40.14s (27.51 tps) | TTFT: 1850.0ms | Top-2: [7, 0, 15, 9, 13] (H=2.126)
+
+```
+
+### 🔹 Run `2026-11-06 12:09:04` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1082 | Elapsed: 38.72s (27.95 tps) | TTFT: 1874.0ms | Top-2: [7, 14, 8, 15] (H=2.131)
+
+```
+
+### 🔹 Run `2026-11-06 12:09:43` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1014 | Elapsed: 36.94s (27.45 tps) | TTFT: 1915.9ms | Top-2: [14, 13, 0, 2] (H=2.120)
+
+```
+
+### 🔹 Run `2026-11-06 12:10:23` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1056 | Elapsed: 38.70s (27.29 tps) | TTFT: 1926.4ms | Top-2: [7, 0, 1, 8, 15] (H=2.144)
+
+```
+
+### 🔹 Run `2026-11-06 12:11:06` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1118 | Elapsed: 41.07s (27.22 tps) | TTFT: 1948.7ms | Top-2: [7, 1, 8, 10] (H=2.127)
+
+```
+
+### 🔹 Run `2026-11-06 12:11:50` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1124 | Elapsed: 42.67s (26.34 tps) | TTFT: 1913.6ms | Top-2: [7, 0, 8, 9, 13] (H=2.125)
+
+```
+
+### 🔹 Run `2026-11-06 12:12:38` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1159 | Elapsed: 46.18s (25.10 tps) | TTFT: 1913.3ms | Top-2: [0, 1, 14, 8, 15] (H=2.127)
+
+```
+
+### 🔹 Run `2026-11-06 12:13:23` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1148 | Elapsed: 42.72s (26.87 tps) | TTFT: 1932.3ms | Top-2: [7, 0, 1, 14, 8] (H=2.134)
+
+```
+
+### 🔹 Run `2026-11-06 12:14:01` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1050 | Elapsed: 36.60s (28.69 tps) | TTFT: 1936.4ms | Top-2: [7, 8, 15, 9, 13] (H=2.131)
+
+```
+
+### 🔹 Run `2026-11-06 12:14:42` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1072 | Elapsed: 39.93s (26.85 tps) | TTFT: 1912.0ms | Top-2: [7, 8, 15, 9, 13] (H=2.121)
+
+```
+
+### 🔹 Run `2026-11-06 12:15:22` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1006 | Elapsed: 37.69s (26.69 tps) | TTFT: 1947.9ms | Top-2: [14, 8, 15, 10] (H=2.133)
+
+```
+
+### 🔹 Run `2026-11-06 12:16:04` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1078 | Elapsed: 40.70s (26.49 tps) | TTFT: 1943.6ms | Top-2: [7, 1, 14, 8, 15] (H=2.127)
+
+```
+
+### 🔹 Run `2026-11-06 12:16:43` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1001 | Elapsed: 36.82s (27.19 tps) | TTFT: 1951.8ms | Top-2: [13, 15, 9, 12] (H=2.128)
+
+```
+
+### 🔹 Run `2026-11-06 12:17:21` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 988 | Elapsed: 36.76s (26.88 tps) | TTFT: 1928.9ms | Top-2: [7, 0, 1, 14, 8] (H=2.137)
+
+```
+
+### 🔹 Run `2026-11-06 12:18:03` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1107 | Elapsed: 40.37s (27.42 tps) | TTFT: 1959.0ms | Top-2: [7, 0, 10, 3] (H=2.128)
+
+```
+
+### 🔹 Run `2026-11-06 12:18:43` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1026 | Elapsed: 38.67s (26.53 tps) | TTFT: 1959.2ms | Top-2: [7, 1, 15, 13, 10] (H=2.120)
+
+```
+
+### 🔹 Run `2026-11-06 12:19:33` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1237 | Elapsed: 48.31s (25.60 tps) | TTFT: 1964.3ms | Top-2: [7, 0, 1, 10] (H=2.126)
+
+```
+
+### 🔹 Run `2026-11-06 12:20:22` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1197 | Elapsed: 46.90s (25.52 tps) | TTFT: 1939.7ms | Top-2: [7, 0, 1, 10, 13] (H=2.116)
+
+```
+
+### 🔹 Run `2026-11-06 12:21:22` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1154 | Elapsed: 43.82s (26.33 tps) | TTFT: 1925.3ms | Top-2: [1, 8, 15, 9] (H=2.125)
+
+```
+
+### 🔹 Run `2026-11-06 12:22:02` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1039 | Elapsed: 38.65s (26.88 tps) | TTFT: 1952.6ms | Top-2: [7, 8, 15, 13, 10] (H=2.117)
+
+```
+
+### 🔹 Run `2026-11-06 12:22:41` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1017 | Elapsed: 36.94s (27.53 tps) | TTFT: 1966.3ms | Top-2: [0, 14, 10, 8] (H=2.133)
+
+```
+
+### 🔹 Run `2026-11-06 12:23:23` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1083 | Elapsed: 40.39s (26.82 tps) | TTFT: 1952.6ms | Top-2: [14, 15, 13, 10] (H=2.134)
+
+```
+
+### 🔹 Run `2026-11-06 12:40:58` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1368 | Elapsed: 51.32s (26.66 tps) | TTFT: 2044.3ms | Top-2: [7, 14, 1, 3] (H=2.134)
+
+```
+
+### 🔹 Run `2026-11-06 12:41:32` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1165 | Elapsed: 33.05s (35.25 tps) | TTFT: 996.2ms | Top-2: [11, 13, 14, 4] (H=2.156)
+
+```
+
+### 🔹 Run `2026-11-06 12:42:24` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1244 | Elapsed: 50.38s (24.69 tps) | TTFT: 2045.9ms | Top-2: [13, 11, 2, 15, 9] (H=2.125)
+
+```
+
+### 🔹 Run `2026-11-06 12:43:14` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1251 | Elapsed: 48.09s (26.02 tps) | TTFT: 2059.4ms | Top-2: [7, 0, 1, 15] (H=2.134)
+
+```
+
+### 🔹 Run `2026-11-06 12:43:48` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1124 | Elapsed: 32.64s (34.43 tps) | TTFT: 1080.9ms | Top-2: [7, 0, 8] (H=2.151)
+
+```
+
+### 🔹 Run `2026-11-06 12:44:37` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1246 | Elapsed: 47.66s (26.15 tps) | TTFT: 2081.9ms | Top-2: [9, 10, 2, 4] (H=2.127)
+
+```
+
+### 🔹 Run `2026-11-06 12:45:25` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1228 | Elapsed: 46.65s (26.32 tps) | TTFT: 2056.3ms | Top-2: [1, 14, 8, 15] (H=2.125)
+
+```
+
+### 🔹 Run `2026-11-06 12:46:12` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1139 | Elapsed: 44.33s (25.69 tps) | TTFT: 2078.9ms | Top-2: [15, 13, 10, 6, 3] (H=2.121)
+
+```
+
+### 🔹 Run `2026-11-06 12:47:06` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1357 | Elapsed: 52.37s (25.91 tps) | TTFT: 2048.9ms | Top-2: [7, 0, 14, 1, 10] (H=2.131)
+
+```
+
+### 🔹 Run `2026-11-06 12:54:35` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1110 | Elapsed: 41.25s (26.91 tps) | TTFT: 408.7ms | Top-2: [7, 0, 1, 10, 13] (H=2.137)
+
+```
+
+### 🔹 Run `2026-11-06 12:55:17` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1077 | Elapsed: 39.69s (27.13 tps) | TTFT: 394.9ms | Top-2: [7, 14, 10, 8] (H=2.142)
+
+```
+
+### 🔹 Run `2026-11-06 12:55:51` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 820 | Elapsed: 32.15s (25.50 tps) | TTFT: 440.8ms | Top-2: [7, 14, 1, 10] (H=2.136)
+
+```
+
+### 🔹 Run `2026-11-06 12:56:27` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 872 | Elapsed: 34.46s (25.30 tps) | TTFT: 398.2ms | Top-2: [7, 0, 13, 3] (H=2.155)
+
+```
+
+### 🔹 Run `2026-11-06 12:57:04` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 906 | Elapsed: 34.44s (26.31 tps) | TTFT: 418.6ms | Top-2: [7, 0, 14, 1, 13] (H=2.134)
+
+```
+
+### 🔹 Run `2026-11-06 12:57:36` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 772 | Elapsed: 30.96s (24.94 tps) | TTFT: 396.7ms | Top-2: [7, 1, 14, 8, 15] (H=2.135)
+
+```
+
+### 🔹 Run `2026-11-06 12:58:03` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 807 | Elapsed: 25.20s (32.02 tps) | TTFT: 810.3ms | Top-2: [14, 10, 8, 15] (H=2.167)
+
+```
+
+### 🔹 Run `2026-11-06 12:58:48` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1180 | Elapsed: 43.20s (27.32 tps) | TTFT: 395.4ms | Top-2: [7, 0, 1, 8, 15] (H=2.133)
+
+```
+
+### 🔹 Run `2026-11-06 12:59:32` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1107 | Elapsed: 42.40s (26.11 tps) | TTFT: 397.7ms | Top-2: [7, 1, 8, 13] (H=2.144)
+
+```
+
+### 🔹 Run `2026-11-06 13:00:10` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 915 | Elapsed: 35.47s (25.79 tps) | TTFT: 462.0ms | Top-2: [11, 9, 0, 13, 4] (H=2.149)
+
+```
+
+### 🔹 Run `2026-11-06 13:00:45` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 943 | Elapsed: 33.54s (28.12 tps) | TTFT: 425.7ms | Top-2: [7, 0, 1, 8, 13] (H=2.137)
+
+```
+
+### 🔹 Run `2026-11-06 13:12:21` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1422 | Elapsed: 51.88s (27.41 tps) | TTFT: 450.8ms | Top-2: [13, 15, 9, 12] (H=2.124)
+
+```
+
+### 🔹 Run `2026-11-06 13:13:09` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1482 | Elapsed: 46.82s (31.65 tps) | TTFT: 1094.5ms | Top-2: [7, 14, 1, 10, 13] (H=2.151)
+
+```
+
+### 🔹 Run `2026-11-06 13:13:49` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1337 | Elapsed: 38.76s (34.50 tps) | TTFT: 1091.1ms | Top-2: [7, 14, 1, 10, 8] (H=2.143)
+
+```
+
+### 🔹 Run `2026-11-06 13:14:30` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1351 | Elapsed: 39.29s (34.38 tps) | TTFT: 1046.2ms | Top-2: [11, 2, 9, 0, 13] (H=2.154)
+
+```
+
+### 🔹 Run `2026-11-06 13:15:22` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1471 | Elapsed: 50.57s (29.09 tps) | TTFT: 449.8ms | Top-2: [7, 0, 14, 1, 10] (H=2.116)
+
+```
+
+### 🔹 Run `2026-11-06 13:16:10` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1449 | Elapsed: 46.29s (31.30 tps) | TTFT: 1133.3ms | Top-2: [0, 10, 8, 13, 3] (H=2.146)
+
+```
+
+### 🔹 Run `2026-11-06 13:16:56` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1461 | Elapsed: 45.19s (32.33 tps) | TTFT: 1103.3ms | Top-2: [7, 0, 14, 1, 8] (H=2.152)
+
+```
+
+### 🔹 Run `2026-11-06 13:17:42` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1480 | Elapsed: 43.94s (33.68 tps) | TTFT: 1091.3ms | Top-2: [7, 0, 14, 1, 8] (H=2.146)
+
+```
+
+### 🔹 Run `2026-11-06 13:18:36` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1464 | Elapsed: 52.18s (28.05 tps) | TTFT: 443.4ms | Top-2: [7, 0, 14, 10] (H=2.116)
+
+```
+
+### 🔹 Run `2026-11-06 13:19:27` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1537 | Elapsed: 49.97s (30.76 tps) | TTFT: 1119.5ms | Top-2: [0, 14, 1, 10, 8] (H=2.149)
+
+```
+
+### 🔹 Run `2026-11-06 13:20:23` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1153 | Elapsed: 41.84s (27.55 tps) | TTFT: 450.4ms | Top-2: [7, 0, 1, 10, 8] (H=2.127)
+
+```
+
+### 🔹 Run `2026-11-06 13:21:05` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1066 | Elapsed: 38.65s (27.58 tps) | TTFT: 1500.5ms | Top-2: [14, 10, 6] (H=2.127)
+
+```
+
+### 🔹 Run `2026-11-06 13:21:51` (`thor_31b_20261106_105639` | `openai-api-hybrid`)
+```text
+🏁 [Hybrid Turn Complete] Tokens: 1191 | Elapsed: 42.93s (27.74 tps) | TTFT: 459.8ms | Top-2: [10, 8, 13, 3] (H=2.125)
+
+```
